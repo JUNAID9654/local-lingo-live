@@ -1,0 +1,2668 @@
+document.addEventListener('DOMContentLoaded', function() {
+    // Get the start button on the home page
+    const startButton = document.querySelector('.primary-btn');
+    
+    if (startButton) {
+        startButton.addEventListener('click', function(e) {
+            // Navigate to the translate page when the start button is clicked
+            window.location.href = 'translate.html';
+        });
+    }
+    
+    // Highlight the active navigation link
+    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    const navLinks = document.querySelectorAll('.nav-links a');
+    
+    navLinks.forEach(link => {
+        const linkHref = link.getAttribute('href');
+        if (linkHref === currentPage) {
+            link.classList.add('active');
+        } else {
+            link.classList.remove('active');
+        }
+    });
+    
+    // Newsletter subscription form
+    const subscribeForm = document.querySelector('.subscribe-form');
+    if (subscribeForm) {
+        const subscribeBtn = subscribeForm.querySelector('.subscribe-btn');
+        subscribeBtn.addEventListener('click', function() {
+            const emailInput = subscribeForm.querySelector('input[type="email"]');
+            if (emailInput.value.trim() !== '') {
+                alert('Thank you for subscribing to our newsletter!');
+                emailInput.value = '';
+            } else {
+                alert('Please enter a valid email address.');
+            }
+        });
+    }
+
+    // Translation functionality - Only run on translate.html page
+    if (currentPage === 'translate.html') {
+        initializeTranslationFeatures();
+    }
+    
+    // Function to initialize translation features
+    function initializeTranslationFeatures() {
+        console.log("Initializing translation features");
+        
+        // DOM elements
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const transliterateBtn = document.getElementById('transliterate-btn');
+        const copyUrduBtn = document.getElementById('copy-urdu-btn');
+        const copyRomanBtn = document.getElementById('copy-roman-btn');
+        const urduText = document.getElementById('urdu-text');
+        const romanText = document.getElementById('roman-text');
+        const statusText = document.getElementById('status');
+        
+        // Check if elements exist before continuing
+        if (!startBtn || !transliterateBtn) {
+            console.error("Required elements not found");
+            return;
+        }
+        
+        // Track if speech recognition is supported
+        let isSpeechRecognitionSupported = false;
+        let recognition = null;
+        
+        // Check browser support for speech recognition
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            isSpeechRecognitionSupported = true;
+            console.log("Using webkitSpeechRecognition");
+        } else if ('SpeechRecognition' in window) {
+            recognition = new SpeechRecognition();
+            isSpeechRecognitionSupported = true;
+            console.log("Using SpeechRecognition");
+        } else {
+            statusText.textContent = 'Speech recognition is not supported in your browser. Please try Chrome or Edge.';
+            startBtn.disabled = true;
+            stopBtn.disabled = true;
+            console.error("Speech recognition not supported");
+            return;
+        }
+        
+        // Variables for transcription
+        let finalTranscript = '';
+        let isTranscribing = false;
+        
+        // Configure speech recognition
+        function configureSpeechRecognition() {
+            if (!recognition) return;
+            
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            
+            // Fix: Explicitly request microphone permission first
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(function(stream) {
+                    console.log("Microphone permission granted");
+                    // Once we have permission, set language
+                    // Try both Urdu language codes
+                    try {
+                        recognition.lang = 'ur-PK'; // Urdu (Pakistan)
+                        console.log("Set language to ur-PK");
+                    } catch (e) {
+                        try {
+                            recognition.lang = 'ur'; // Generic Urdu
+                            console.log("Set language to ur");
+                        } catch (e2) {
+                            console.error("Could not set language", e2);
+                        }
+                    }
+                })
+                .catch(function(err) {
+                    console.error("Error accessing microphone:", err);
+                    statusText.textContent = `Microphone access denied: ${err.message}. Please check your browser permissions.`;
+                    startBtn.disabled = true;
+                    stopBtn.disabled = true;
+                });
+        }
+        
+        // Initialize speech recognition
+        configureSpeechRecognition();
+        
+        // Event listeners for buttons
+        startBtn.addEventListener('click', startListening);
+        stopBtn.addEventListener('click', stopListening);
+        clearBtn.addEventListener('click', clearText);
+        
+        // Enhanced event listener for transliterate button
+        transliterateBtn.addEventListener('click', function() {
+            const textToTransliterate = urduText.value.trim();
+            if (textToTransliterate) {
+                transliterateToRoman(textToTransliterate);
+            } else {
+                statusText.textContent = "Please speak or type Urdu text before transliterating";
+            }
+        });
+        
+        copyUrduBtn.addEventListener('click', () => copyText(urduText));
+        copyRomanBtn.addEventListener('click', () => copyText(romanText));
+        
+        // Speech recognition event handlers
+        if (recognition) {
+            recognition.onstart = function() {
+                isTranscribing = true;
+                statusText.innerHTML = '<span class="pulse"></span> Listening... Speak in Urdu';
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                console.log("Recognition started");
+            };
+            
+            recognition.onend = function() {
+                isTranscribing = false;
+                statusText.textContent = 'Microphone is off. Click "Transliterate to Roman" to convert your text.';
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                console.log("Recognition ended");
+            };
+            
+            recognition.onresult = function(event) {
+                console.log("Recognition result received", event);
+                let interimTranscript = '';
+                
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript + ' ';
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+                
+                // Update Urdu text area with both final and interim results
+                urduText.value = finalTranscript + interimTranscript;
+                console.log("Updated transcript:", urduText.value);
+            };
+            
+            recognition.onerror = function(event) {
+                statusText.textContent = `Error occurred in speech recognition: ${event.error}`;
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                console.error("Recognition error:", event.error);
+                
+                // Additional handling for permission errors
+                if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+                    statusText.textContent = 'Microphone access denied. Please check browser permissions and try again.';
+                    
+                    // Try to request permissions again
+                    configureSpeechRecognition();
+                }
+            };
+        }
+        
+        // Function to start listening
+        function startListening() {
+            if (!recognition) return;
+            
+            finalTranscript = '';
+            urduText.value = '';
+            romanText.value = '';
+            
+            try {
+                // Double-check permission before starting
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(function(stream) {
+                        recognition.start();
+                        console.log("Starting speech recognition");
+                    })
+                    .catch(function(err) {
+                        console.error("Error accessing microphone:", err);
+                        statusText.textContent = `Microphone access denied: ${err.message}. Please check your browser permissions.`;
+                    });
+            } catch (e) {
+                console.error("Error starting speech recognition:", e);
+                statusText.textContent = `Error starting microphone: ${e.message}`;
+            }
+        }
+        
+        // Function to stop listening
+        function stopListening() {
+            if (!recognition) return;
+            
+            try {
+                recognition.stop();
+                console.log("Stopping speech recognition");
+            } catch (e) {
+                console.error("Error stopping speech recognition:", e);
+            }
+        }
+        
+        // Function to clear text
+        function clearText() {
+            finalTranscript = '';
+            urduText.value = '';
+            romanText.value = '';
+            statusText.textContent = 'Press the microphone button to start speaking in Urdu';
+            console.log("Cleared text");
+        }
+        
+        // Function to copy text
+        function copyText(element) {
+            element.select();
+            document.execCommand('copy');
+            
+            // Visual feedback
+            const originalBg = element.style.backgroundColor;
+            element.style.backgroundColor = 'rgba(46, 176, 117, 0.3)';
+            setTimeout(() => {
+                element.style.backgroundColor = originalBg;
+            }, 200);
+            
+            console.log("Copied text from", element.id);
+        }
+        
+        // Function to transliterate Urdu to Roman script
+        function transliterateToRoman(text) {
+            // Show transliteration in progress
+            romanText.value = "Transliterating...";
+            statusText.textContent = "Converting to Roman script...";
+            console.log("Transliterating text:", text);
+            
+            /// Combined dictionary of Urdu-Roman transliterations without duplicate
+            const transliterations = {
+                // Greetings
+                'سلام': 'Salaam',
+                'السلام علیکم': 'Assalamu Alaikum',
+                'وعلیکم السلام': 'Wa Alaikum Assalam',
+                'ہیلو': 'Hello',
+                'خوش آمدید': 'Khush Aamdeed',
+                'صبح بخیر': 'Subha Bakher',
+                'دوپہر بخیر': 'Dopehar Bakher',
+                'شام بخیر': 'Shaam Bakher',
+                'شب بخیر': 'Shab Bakher',
+                'خدا حافظ': 'Khuda Hafiz',
+                'الوداع': 'Alvida',
+                'اللہ حافظ': 'Allah Hafiz', 
+                'ہیلو': 'Hello',
+                'ہائے': 'Hi',
+                'نمستے': 'Namaste',
+                'سلام علیکم': 'Salaam Alaikum',
+                'السلام': 'Assalam',
+                'صبح سلام': 'Subah Salaam',
+                'ہی' : 'Hee',
+
+                //New words
+                'سیکھیں': 'Seekhein ',
+                'سیکھنا': 'Seekhna ',
+                'مزہ': 'Mazah ',
+                
+
+                // Questions
+                'کیا؟': ' Kya? ',
+                'کہاں؟': ' Kahan? ',
+                'کیوں؟': 'Kyun?',
+                'کب؟': 'Kab?',
+                'کیسا؟': 'Kaisa?',
+                'کیسی؟': 'Kaisi?',
+                'اور اپ؟': 'Aur aap?',
+
+                // Question Words
+                'کیا': ' Kya',
+                ' کون': ' Kaun ',
+                'کہاں': 'Kahan',
+                'کیوں': 'Kyun',
+                'کب': 'Kab',
+                'کیسا': 'Kaisa',
+                'کیسی': 'Kaisi',
+                'کونسا': 'Kaunsa',
+                'کتنا': 'Kitna',
+                'کتنی': 'Kitni',
+                'کتنے': 'Kitne',
+                'کبھی': 'Kabhi',
+                'کہاں سے': 'Kahan se',
+                'کہاں تک': 'Kahan tak',
+                'کس کے ساتھ': 'Kis ke sath',
+                'کس کا': 'Kis ka',
+                'کس کی': 'Kis ki',
+                'کس سے': 'Kis se',
+                
+                // Pronouns
+                'میں': 'Main',
+                'ہم': 'Hum',
+                'تم': 'Tum ',
+                'اپ': 'Aap',
+                'وہ': 'Woh',
+                'یہ': 'Yeh',
+                'میرے': 'Mere',
+                'مجھے': 'Mujhe',
+                'تجھے': 'Tujhe', 
+                'تو': 'Tu',
+                'میرا': 'Mera',
+                'میری': 'Meri',
+                'میرے': 'Mere',
+                'ہمارا': 'Hamara',
+                'تمہارا': 'Tumhara',
+                'تمہاری': 'Tumhari',
+                'تمہیں ': 'Tumhein ',
+                'اپ کا': 'Aap ka',
+                'اپ کی': 'Aap ki',
+                'تیرا': 'Tera',
+                'تیری': 'Teri',
+                'تیارے': 'Tere',
+                'ان کا': 'Un ka',
+                'ان کی': 'Un ki',
+                'اس کا': 'Us ka',
+                'اس کی': 'Us ki',
+                'مجھے': 'Mujhe',
+                'تجھے': 'Tujhe',
+                'اپ کو': 'Aap ko',
+                'ہمیں': 'Humein',
+                'اسے': 'Usay',
+                'انہیں': 'Unhein',
+                'خود': 'Khud',
+                'اپنا': 'Apna',
+                'اپنی': 'Apni',
+                'اپنے': 'Apne', 
+                'اواز ': 'Awaaz ',
+                
+                // Verbs
+                'کھانا': 'Khana',
+                'پینا': 'Peena',
+                'چلنا': 'Chalna',
+                'دوڑنا': 'Dorna',
+                'سونا': 'Sona',
+                'اٹھنا': 'Uthna',
+                'بیٹھنا': 'Baithna',
+                'لکھنا': 'Likhna',
+                'پڑھنا': 'Parhna',
+                'بولنا': 'Bolna',
+                'جانا': 'Jana',
+                'آنا': 'Aana',
+                'کرنا': 'Karna',
+                'دیکھنا': 'Dekhna',
+                'سننا': 'Sunna',
+                'سیکھنا': 'Seekhna',
+                'کہنا': 'Kehna',
+                'چاہنا': 'Chahna',
+                'لینا': 'Lena',
+                'دینا': 'Dena',
+                'رکھنا': 'Rakhna',
+                'جاگنا': 'Jaagna',
+                'ہنسنا': 'Hansna',
+                'رونا': 'Rona',
+                'چلانا': 'Chalana',
+                'خریدنا': 'Kharidna',
+                'بیچنا': 'Bechna',
+                'کام کرنا': 'Kaam Karna',
+                'سوچنا': 'Sochna',
+                'محسوس کرنا': 'Mehsoos Karna',
+                'سمجھنا': 'Samajhna',
+                'انتظار کرنا': 'Intizaar Karna',
+                'پوچھنا': 'Poochna',
+                'بتانا': 'Batana',
+                'دھونا': 'Dhona',
+                'کھولنا': 'Kholna',
+                'بند کرنا': 'Band Karna',
+                'یاد کرنا': 'Yaad Karna',
+                'بھولنا': 'Bhoolna',
+                'ماننا': 'Maan-na',
+                'دھکیلنا': 'Dhakelna',
+                'پکڑنا': 'Pakarna',
+                'ہونا': 'Hona',
+                'پکڑنا': 'Pakadna',
+                'چھوڑنا': 'Chhorna',
+                'جلانا': 'Jalana',
+                'بنانا': 'Banana',
+                'کھسکنا': 'Khiskna',
+                'لڑنا': 'Ladna',
+                'رو دینا': 'Ro dena',
+                'واسطہ ڈالنا': 'Wasta dalna',
+                'گھومنا': 'Ghoomna',
+                'سفر کرنا': 'Safar karna',
+                'مزیدار لگنا': 'Mazedar lagna',
+                'امتحان دینا': 'Imtihan dena',
+                'مدد کرنا': 'Madad karna',
+                'پکانا': 'Pakana',
+                'تیار ': 'Tayyar ', 
+                'جاگنا': 'Jaagna',
+                'کھڑا ہونا': 'Khara hona',
+                'استعمال کرنا': 'Istemaal karna',
+                
+                // Adjectives
+                'اچھا': 'Accha',
+                'برا': 'Bura',
+                'نیا': 'Naya',
+                'پرانا': 'Purana',
+                'خوبصورت': 'Khoobsurat',
+                'بڑا': 'Bara',
+                'چھوٹا': 'Chhota',
+                'تیز': 'Tez',
+                'آہستہ': 'Aahista',
+                'مزےدار': 'Mazedar', 
+                'میٹھا': 'Meetha',
+                'کھٹا': 'Khatta',
+                'نمکین': 'Namkeen',
+                'کڑوا': 'Karrwa',
+                'ٹھنڈا': 'Thanda',
+                'گرم': 'Garam',
+                'لمبا': 'Lamba',
+                'چھوٹا': 'Chhota',
+                'بھاری': 'Bhaari',
+                'ہلکا': 'Halka',
+                'تیز': 'Tez',
+                'سست': 'Sust',
+                'صاف': 'Saaf',
+                'گندا': 'Ganda',
+                'نرم': 'Naram',
+                'سخت': 'Sakht',
+                'سچا': 'Sucha',
+                'جھوٹا': 'Jhootha',
+                'مزیدار': 'Mazedar',
+                'بدذائقہ': 'Badzaeqa',
+                'خوشبودار': 'Khushbodar',
+                'بدبودار': 'Badbodar',
+                'اندھیرا': 'Andhera',
+                'روشن': 'Roshan',
+                'خوبصورت': 'Khoobsurat',
+                'بدصورت': 'Badsoorat',
+                'پرانا': 'Purana',
+                'نیا': 'Naya',
+                'دلچسپ': 'Dilchasp',
+                'بور': 'Bore',
+                'خاموش': 'Khamosh',
+                'پُرشور': 'Purshor',
+                'سستا': 'Sasta',
+                'مہنگا': 'Mehanga',
+                'تازہ': 'Taaza',
+                'باسی': 'Baasi',
+                'بہادر': 'Bahadur',
+                'ڈرپوک': 'Darpok',
+                'چمکدار': 'Chamakdar',
+                'مدھم': 'Madham',
+                'گہرا': 'Gehra',
+                'ہلکا': 'Halka',
+                'موٹا': 'Mota',
+                'پتلا': 'Patla',
+                'پیارا': 'Pyaara',
+                'محنتی': 'Mehnati',
+                'موٹو ': 'Motu ',
+                
+                // Adverbs
+                'آج': 'Aaj',
+                'کل': 'Kal',
+                'جلدی': 'Jaldi',
+                'دیر': 'Der',
+                'ابھی': 'Abhi',
+                'پھر': 'Phir',
+                'ہمیشہ': 'Hamesha',
+                'کبھی': 'Kabhi',
+                'کہیں': 'Kahin',
+                'یہاں': 'Yahan',
+                'بہت': 'Bohat', 
+                'جلدی': 'Jaldi',
+                'دیر سے': 'Der se',
+                'آہستہ': 'Aahista',
+                'بہت': 'Bohat',
+                'کم': 'Kam',
+                'زیادہ': 'Zyada',
+                'ہمیشہ': 'Hamesha',
+                'کبھی': 'Kabhi',
+                'اکثر': 'Aksar',
+                'ابھی': 'Abhi',
+                'فی الحال': 'Filhaal',
+                'اب تک': 'Ab tak',
+                'جلدی سے': 'Jaldi se',
+                'اندر': 'Andar',
+                'باہر': 'Bahar',
+                'پھر': 'Phir',
+                'یہاں': 'Yahan',
+                'وہاں': 'Wahan',
+                'کہیں': 'Kahin',
+                'ایک ساتھ': 'Ek saath', 
+                'دھیرے دھیرے': 'Dheere dheere',
+                'چپکے سے': 'Chupke se',
+                'غصے میں': 'Gusse mein',
+                'دور سے': 'Door se',
+                'کافی': 'Kaafi',
+                'بغیر': 'Baghair',
+                'بہت زیادہ': 'Bohat zyada',
+                'دھیما': 'Dheema',
+                'سیدھا': 'Seedha',
+                'آرام سے': 'Aaram se',
+                'جلدی میں': 'Jaldi mein',
+                'کھل کر': 'Khul kar',
+                'کامیابی سے': 'Kamyabi se',
+                'لیکن': 'Lekin',
+                'خود بخود': 'Khud bakhud',
+                'چمکدار': 'Chamakdar',
+                'آہستہ آہستہ': 'Aahista aahista',
+                'گہرائی میں': 'Gehraai mein',
+                'یقینی طور پر': 'Yakeeni tor par',
+                'کچھ نہ کچھ': 'Kuch na kuch', 
+                
+                // Prepositions
+                'کے ساتھ': 'Ke saath',
+                'کے بغیر': 'Ke baghair',
+                'کے بعد': 'Ke baad',
+                'کے پہلے': 'Ke pehle',
+                'کے نیچے': 'Ke neeche',
+                'کے اوپر': 'Ke ooper',
+                'کے اندر': 'Ke andar',
+                'کے باہر': 'Ke bahar',
+                'کے درمیان': 'Ke darmiyan',
+                'کے سامنے': 'Ke saamne',
+                'کے پیچھے': 'Ke peeche',
+                'کی طرف': 'Ki taraf',
+                'کی وجہ سے': 'Ki wajah se',
+                'کے لئے': 'Ke liye',
+                'کی مانند': 'Ki maanind',
+                'کی طرح': 'Ki tarah',
+                'سے': 'Se',
+                'تک': 'Tak',
+                'میں': 'Mein',
+                'پر': 'Par',
+                ' کو': ' Ko ', 
+                
+                // Conjunctions
+                'اور': 'Aur',
+                'لیکن': 'Lekin',
+                'مگر': 'Magar',
+                'یا': 'Ya',
+                'کیونکہ': 'Kyunke',
+                'جبکہ': 'Jabke',
+                'تاکہ': 'Taake',
+                'اگر': 'Agar',
+                'جب': 'Jab',
+                'پھر': 'Phir',
+                'کہ': 'Ke',
+                'ورنہ': 'Warna',
+                'چونکہ': 'Chunke',
+                'حالانکہ': 'Halaanke',
+                'بس': 'Bas',
+                'یا تو': 'Ya to',
+                'نہ ہی': 'Na hi',
+                'بلکہ': 'Balkay',
+                'تاہم': 'Tahum',
+                'سو': 'So',
+                'جیسے ہی': 'Jaise hi', 
+                
+                // Interjections
+                'ارے': 'Arey',
+                'اوہ': 'Ohh',
+                'اف': 'Uff',
+                'ہائے': 'Hai',
+                'آہا': 'Aha',
+                'واہ': 'Wah',
+                'اوہو': 'Oho',
+                'شکر': 'Shukar',
+                'افسوس': 'Afsos',
+                'ہیں': 'Hain',
+                'اوئے': 'Oye',
+                'بھئی': 'Bhai',
+                'چلو': 'Chalo',
+                'ہونہہ': 'Hunh',
+                'بس': 'Bas',
+                'اچھا': 'Acha',
+                'بری بات': 'Buri Baat',
+                'کیا': 'Kya',
+                'نہیں': 'Nahi',
+                'ہاں': 'Haan',
+                
+                // Common Nouns 
+                'پیار': 'Pyaar',
+                'محبت': 'Mohabbat',
+                'گلی': 'Gali',
+                'دروازہ': 'Darwaza',
+                'کمرہ': 'Kamra',
+                'میز': 'Mez',
+                'کرسی': 'Kursi',
+                'کپڑا': 'Kapra',
+                'موبائل': 'Mobile',
+                'قلم': 'Qalam',
+                'دیوار': 'Deewar', 
+                'گھر': 'Ghar',
+                'دوست': 'Dost',
+                'خواب': 'Khawab',
+                'زندگی': 'Zindagi',
+                'خوشی': 'Khushi',
+                'چاند': 'Chaand',
+                'سورج': 'Sooraj',
+                'پہاڑ': 'Pahaar',
+                'سمندر': 'Samundar',
+                'شہر': 'Sheher',
+                'قصہ': 'Qissa',
+                'دریا': 'Darya',
+                'رشتہ': 'Rishta',
+                'دنیا': 'Duniya',
+                'زندہ': 'Zinda',
+                'کمرہ': 'Kamra',
+                'درخت': 'Darakht',
+                'دال': 'Daal',
+                'سبزی': 'Sabzi',
+                'دریا': 'Darya',
+                'پرندہ': 'Parinda',
+                'گلاب': 'Gulab',
+                'آسمان': 'Aasman',
+                'زمین': 'Zameen',
+                'چمچ': 'Chammach',
+                'نقصان': 'Nuqsan',
+                'فائدہ': 'Faida',
+                'ہنسی': 'Hansi',
+                'دھواں': 'Dhuwan',
+                'بارش': 'Barish',
+                'موسم': 'Mausam',
+                'شیشہ': 'Sheesha',
+                'خود': 'Khud',
+                'مال': 'Maal',
+                'رنگ': 'Rang',
+                'کتھائی': 'Kithai',
+                'توفیق': 'Taufiq',
+                'تقریب': 'Taqreeb',
+                'پسند': 'Pasand',
+                'ادھار': 'Adhaar',
+                'پھول': 'Phool',
+                'دھول': 'Dhol',
+                'عید': 'Eid',
+                
+                //Day to day words
+                'اور': 'Aur',
+                'کا': 'Ka',
+                'کی': 'Ki',
+                'کے': 'Ke',
+                'سے': 'Se',
+                'پر': 'Par',
+                'میں': 'Main',
+                'کے لیے': 'Ke liye',
+                'کے ساتھ': 'Ke saath',
+                'کے بارے میں': 'Ke bare mein',
+                'کی طرح': 'Ki tarah',
+                
+                // Common High-Frequency Words (Roman Urdu)
+                'ضرور': 'Zaroor',
+                'جلدی': 'Jaldi',
+                'ضرورت': 'Zaroorat',
+                'ملاقات': 'Mulakaat',
+                'شاید': 'Shayad',
+                'کچھ': 'Kuch',
+                'زیادہ': 'Zyada',
+                'کم': 'Kam',
+                'ہمیشہ': 'Hamesha',
+                'ابھی': 'Abhi',
+                'پہلے': 'Pehle',
+                'بعد': 'Baad',
+                'چلو': 'Chalo',
+                'ٹھیک': 'Theek',
+                'اچھا': 'Acha',
+                'برا': 'Bura',
+                'تم': 'Tum',
+                'ہم': 'Hum',
+                'وہ': 'Woh',
+                'یار': 'Yaar',
+                'کبھی': 'Kabhi',
+                'کب': 'Kab',
+                'کہاں': 'Kahan',
+                'کیوں': 'Kyun',
+                'کیسے': 'Kaise',
+                'دیر': 'Der',
+                'جلدی': 'Jaldi',
+                'واپس': 'Wapas',
+                'آگے': 'Aagay',
+                'پیچھے': 'Peechay',
+                'بار': 'Baar',
+                'ہو سکتا ہے': 'Ho sakta hai',
+                'یقیناً': 'Yaqeenan',
+                'مثال': 'Misaal',
+                'بات': 'Baat',
+                'باتیں': 'Baatain',
+                'خیال': 'Khayaal',
+                'سوچ': 'Soch',
+                'احساس': 'Ehsaas',
+                'پیار': 'Pyaar',
+                'نفرت': 'Nafrat',
+                'محبت': 'Mohabbat',
+                'دوستی': 'Dosti',
+                'پرواہ': 'Parwah',
+                'انداز': 'Andaaz',
+                'یاد': 'Yaad',
+                'منظور': 'Manzoor',
+                'اجازت': 'Ijazat',
+                'پہچان': 'Pehchaan',
+                'اوقات': 'Auqaat',
+                'مدد': 'Madad',
+                'خطرہ': 'Khatra',
+                'فرصت': 'Fursat',
+                'قسمت': 'Qismat',
+                'حالت': 'Haalat',
+                'منزل': 'Manzil',
+                'راستہ': 'Raasta',
+                'واپسی': 'Wapsi',
+                'چاہیے': 'Chahiye',
+                'مجبور': 'Majboor',
+                'خوشی': 'Khushi',
+                'اداسی': 'Udaasi',
+                'صبر': 'Sabr',
+                'برداشت': 'Bardasht',
+                
+
+                // Household and daily actions
+                'کپڑے': 'Kapray',
+                'برتن': 'Bartan',
+                'فرش': 'Farsh',
+                'میز': 'Mez',
+                'کرسی': 'Kursi',
+                'بیڈ': 'Bed',
+                'الماری': 'Almari',
+                'دروازہ': 'Darwaza',
+                'کھڑکی': 'Khidki',
+                'پنکھا': 'Pankha',
+                'لائٹ': 'Light',
+                'صابن': 'Sabun',
+                'تولیہ': 'Toliya',
+                'برش': 'Brush',
+                'آئینہ': 'Aaina',
+                'جھاڑو': 'Jharoo',
+                'پوچھا': 'Pocha',
+                'استری کرنا': 'Istri Karna',
+                'تہ کرنا': 'Teh Karna',
+                'لٹکانا': 'Latkaana',
+              
+                // Family relations
+                'ماں': 'Maa',
+                'باپ': 'Baap',
+                'بھائی': 'Bhai',
+                'بہن': 'Behen',
+                'بیٹا': 'Beta',
+                'بیٹی': 'Beti',
+                'دادا': 'Dada',
+                'دادی': 'Dadi',
+                'نانا': 'Nana',
+                'نانی': 'Nani',
+                'چچا': 'Chacha',
+                'چچی': 'Chachi',
+                'ماموں': 'Mamoon',
+                'مامی': 'Mami',
+                'خالہ': 'Khala',
+                'خالو': 'Khalu',
+              
+                // Numbers
+                'ایک': 'Aik',
+                'دو': 'Do',
+                'تین': 'Teen',
+                'چار': 'Chaar',
+                'پانچ': 'Paanch',
+                'چھے': 'Chay',
+                'سات': 'Saat',
+                'آٹھ': 'Aath',
+                'نو': 'Nau',
+                'دس': 'Das',
+                'گیارہ': 'Gyarah',
+                'بارہ': 'Barah',
+                'تیرہ': 'Terah',
+                'چودہ': 'Chaudah',
+                'پندرہ': 'Pandrah',
+                'سولہ': 'Solah',
+                'سترہ': 'Satrah',
+                'اٹھارہ': 'Atharah',
+                'انیس': 'Unees',
+                'بیس': 'Bees',
+              
+                // Days of the Week
+                'پیر': 'Peer',
+                'منگل': 'Mangal',
+                'بدھ': 'Budh',
+                'جمعرات': 'Jumeraat',
+                'جمعہ': 'Jumma',
+                'ہفتہ': 'Hafta',
+                'اتوار': 'Itwaar',
+              
+                // Colors
+                'سفید': 'Safaid',
+                'کالا': 'Kala',
+                'نیلا': 'Neela',
+                'سبز': 'Sabz',
+                'پیلا': 'Peela',
+                'سرخ': 'Surkh',
+                'نارنجی': 'Naranji',
+                'جامنی': 'Jamni',
+                'بھورا': 'Bhoora',
+                'گلابی': 'Gulaabi',
+              
+                // Body Parts
+                'سر': 'Sar',
+                'آنکھ': 'Aankh',
+                'ناک': 'Naak',
+                'کان': 'Kaan',
+                'منہ': 'Munh',
+                'زبان': 'Zubaan',
+                'ہاتھ': 'Haath',
+                'پاؤں': 'Paaon',
+                'دل': 'Dil',
+                'دماغ': 'Dimaag',
+                'گھٹنے': 'Ghutnay',
+                'پیٹھ': 'Peeth',
+                'انگلی': 'Ungli',
+                'چہرہ': 'Chehra',
+              
+                // Animals
+                'کتا': 'Kutta',
+                'بلی': 'Billi',
+                'گھوڑا': 'Ghora',
+                'گائے': 'Gaye',
+                'بکرا': 'Bakra',
+                'مرغی': 'Murghi',
+                'بطخ': 'Batakh',
+                'اونٹ': 'Oont',
+                'شیر': 'Sher',
+                'ہاتھی': 'Haathi',
+                'بھیڑ': 'Bheerh',
+                'چڑیا': 'Chiriya',
+                'مچھلی': 'Machhli',
+                'خرگوش': 'Khargosh',
+              
+                // Weather & Nature
+                'موسم': 'Mausam',
+                'سورج': 'Sooraj',
+                'چاند': 'Chaand',
+                'ستارے': 'Sitaare',
+                'بادل': 'Baadal',
+                'بارش': 'Baarish',
+                'ہوا': 'Hawa',
+                'گرمی': 'Garmi',
+                'سردی': 'Sardi',
+                'بہار': 'Bahaar',
+                'خزاں': 'Khizaan',
+                'درخت': 'Darakht',
+                'پھول': 'Phool',
+                'پودا': 'Poda',
+                'ندی': 'Nadi',
+                
+                // Time & Date Words
+                'صبح': 'Subah',
+                'دوپہر': 'Dopehar',
+                'شام': 'Shaam',
+                'رات': 'Raat',
+                'دن': 'Din',
+                'ہفتہ': 'Hafta',
+                'مہینہ': 'Mahina',
+                'سال': 'Saal',
+                'کل': 'Kal',
+                'آج': 'Aaj',
+                'کل رات': 'Kal Raat',
+                'صبح سویرے': 'Subah Saweray',
+                'ابھی': 'Abhi',
+                'پرسوں': 'Parson',
+                'اب': 'Ab',
+                'روز': 'Roz',
+                'ہر روز': 'Har roz',
+                'پہلے': 'Pehle',
+                'بعد میں': 'Baad mein',
+                'جلدی': 'Jaldi',
+                'دیر': 'Der',
+                'ہر وقت': 'Har waqt',
+                'کبھی نہیں': 'Kabhi nahi',
+                
+                // Emotions
+                'خوش': 'Khush',
+                'اداس': 'Udaas',
+                'غصہ': 'Ghussa',
+                'محبت': 'Mohabbat',
+                'نفرت': 'Nafrat',
+                'شرمندگی': 'Sharmindagi',
+                'فخر': 'Fakhar',
+                'حیرت': 'Hairat',
+                'خوف': 'Khauf',
+                'جذبہ': 'Jazba',
+                'جوش': 'Josh',
+                'چڑچڑا': 'Chirchira',
+                'ادھورا': 'Adhoora',
+                'پریشان': 'Pareshan',
+                
+                // Names (Male)
+                'عمر': 'Omar ',
+                'علی': 'Ali ',
+                'حسن': 'Hasan ',
+                'احمد': 'Ahmed ',
+                'عثمان': 'Usman ',
+                'بلال': 'Bilal ',
+                'کاشف': 'Kashif ',
+                'فیصل': 'Faisal ',
+                'سعد': 'Saad ',
+                'جنید': 'Junaid ',
+                'ریاض': 'Riaz ',
+                'یاسر': 'Yasir ',
+                'نعمان': 'Noman ',
+                'فہد': 'Fahad ',
+                'طارق': 'Tariq ',
+                'عدنان': 'Adnan ',
+                'ماجد': 'Majid ',
+                'علی': 'Ali ',
+                'احمد': 'Ahmed ',
+                'حسن': 'Hassan ',
+                'حسین': 'Hussain ',
+                'محمود': 'Mahmood ',
+                'سلمان': 'Salman ',
+                'یوسف': 'Yusuf ',
+                'عثمان': 'Usman ',
+                'محمود': 'Mahmood ',
+                'عبداللہ': 'Abdullah ',
+                'زاہد': 'Zahid ',
+                'رحمان': 'Rahman ',
+                'شاہد': 'Shahed ',
+                'شاہد': 'Shahid ',
+                'خالد': 'Khalid ',
+                'فیصل': 'Faisal ',
+                'امجد': 'Amjad ',
+                'سلیم': 'Saleem ',
+                'ابراہیم': 'Ibrahim ',
+                'فیاض': 'Fayyaz ',
+                'رحمت': 'Rehmat ',
+                'احسان': 'Ahsan ',
+                'ساجد': 'Sajid ',
+                'ارشد': 'Arshad ',
+                'یاسر': 'Yasir ',
+                'ناصر': 'Nasir ',
+                'لطیف': 'Latif ',
+                'سید': 'Syed ',
+                'رضا': 'Reza ',
+                'نعیم': 'Naeem ',
+                'محمود': 'Mahmood ',
+                'ریحان': 'Rehan ',
+                'عادل': 'Adil ',
+                'ناصر': 'Nasar ',
+                'اسد': 'Asad ',
+                'اکبر': 'Akbar ',
+                'تنویر': 'Tanveer ',
+                'باسط': 'Baasit ',
+                'کامران': 'Kamran ',
+                'شعیب': 'Shoaib ',
+                'وقاص': 'Waqas ',
+                'عبدالرحمن': 'Abdul Rahman ',
+                'حیدر': 'Haider ',
+                'نذیر': 'Nazeer ',
+                'رفیع': 'Rafi ',
+                'دانش': 'Danish ',
+                'شہزاد': 'Shehzad ',
+                
+                // Female Names
+                'نبیلہ ': 'Nabeela ',
+                'عائشہ': 'Ayesha ',
+                'مریم': 'Maryam ',
+                'زہرا': 'Zahra ',
+                'فاطمہ': 'Fatima ',
+                'سارہ': 'Sarah ',
+                'فرزانہ': 'Farzana ',
+                'رقیہ': 'Ruqayyah ',
+                'ناریا': 'Nariyah',
+                'ام حبیبہ': 'Um Habiba ',
+                'آمنہ': 'Amina ',
+                'ریحانہ': 'Rehana ',
+                'انجیلہ': 'Enjila ',
+                'عائشہ': 'Aisha ',
+                'کائنات': 'Kainat ',
+                'صفیہ': 'Safiya ',
+                'عبیرہ': 'Abeera ',
+                'خدیجہ': 'Khadijah ',
+                'عالیہ': 'Aaliya ',
+                'نوشین': 'Nosheen ',
+                'یاسمین': 'Yasmeen ',
+                'ثمینہ': 'Sameena ',
+                'روبینہ': 'Rubina ',
+                'مناہ': 'Muna ',
+                'ہانیہ': 'Hania ',
+                'فریحہ': 'Fareeha ',
+                'سیمین': 'Semeen ',
+                'زینب': 'Zainab ',
+                'نسرین': 'Nasreen ',
+                'مریم نور': 'Maryam Noor ',
+                'اعظمہ': 'Azma ',
+                'نبیرہ': 'Nabeera ',
+                'فریال': 'Faryal ',
+                'شبنم': 'Shabnam ',
+                'مہناز': 'Mehnaz ',
+                'نورین': 'Noreen ',
+                'شازیہ': 'Shazia ',
+                'ثمینہ': 'Sameena ',
+                'سبا': 'Saba ',
+                'رقیہ': 'Ruqayyah ',
+                'پروین': 'Parveen ',
+                'فرح': 'Farah ',
+                'انیرا': 'Aneera ',
+                'عائشہ': 'Ayesha ',
+                'خوشبو': 'Khushboo ',
+                'مونا': 'Mona ',
+                'رباب': 'Rabab ',
+                'زہرہ': 'Zahra ',
+                'مینا': 'Meena ',
+                'میثم': 'Mehtim ',
+                'حنا': 'Hina ',
+                'غزالہ': 'Ghazala ',
+                'نورا': 'Nora ',
+                'انوشہ': 'Anousha ',
+                'ہنادیہ': 'Hadiya ',
+                'آئشہ': 'Ayesha ',
+                'ارم': 'Iram ',
+                'روبینہ': 'Rubina ',
+                'نور': 'Noor ',
+                'سیدا': 'Saida ',
+                'عائشہ': 'Aisha ',
+                'عالیہ': 'Aaliya ',
+
+                // Surnames
+                'پٹھان': 'Pathan ',
+                'خان': 'Khan ',
+                'شیخ': 'Sheikh ',
+                'بیگ': 'Beg ',
+                'مرزا': 'Mirza ',
+                'انساری': 'Ansari ',
+                'صدیقی': 'Siddiqui ',
+                'خاندانی': 'Khandani ',
+                'چودھری': 'Chaudhry ',
+                'قریشی': 'Qureshi ',
+                'محمودی': 'Mahmoodi ',
+                'داؤدی': 'Daudi ',
+                'رفیعی': 'Rafai ',
+                'جمالی': 'Jamali ',
+                'بلخی': 'Balkhi ',
+                'کاشفی': 'Kashfi ',
+                'فلاحی': 'Fihai',
+                'نظیری': 'Naziri ',
+                'شہری': 'Shehri ',
+                'اسلامی': 'Islam i',
+                'بلوچ': 'Baloch ',
+                'حسینی': 'Husseini ',
+                'جتوئی': 'Jatoi ',
+                'دکنی': 'Deccani ',
+                'ہاشمی': 'Hashmi ',
+                'علی': 'Ali ',
+                'محسن': 'Mohsin ',
+                'طاہری': 'Tahiri ',
+                
+                // Other Surnames
+                'جان': 'John ',
+                'ڈیویڈ': 'David ',
+                'گارسیا': 'Garcia ',
+                'شوما': 'Sharma ',
+                'ورما': 'Verma ',
+                'پٹیل': 'Patel ',
+                'جوشی': 'Joshi ',
+                'میہتا': 'Mehta ',
+                'سنہا': 'Sinha ',
+                'گورو': 'Gurung ',
+                'سنگھ': 'Singh ',
+                'کاؤر': 'Kaur ',
+                'بھاگت': 'Bhagat ',
+                'چوہان': 'Chauhan ',
+                'رائے': 'Rai ',
+                'گاندھی': 'Gandhi ',
+                'سچدیوا': 'Sachdeva ',
+                'دیشمکھ': 'Deshmukh ',
+                'یادیو': 'Yadav ',
+                'یشور': 'Yeshwar ',
+                'کپور': 'Kapoor ',
+                'مہتہ': 'Mehta ',
+                'ڈے': 'Day ',
+                'ویاس': 'Vyas ',
+                'شاہ': 'Shah ',
+                'پوری': 'Puri ',
+                'گاندھی': 'Gandhi ',
+                'گھوش': 'Ghosh ',
+                'مرہٹہ': 'Maratha ',
+                'کشواہا': 'Kushwaha ',
+                'کمار': 'Kumar ',
+                'پریانش': 'Priyansh ', 
+                'پرکاش': 'Prakash ',
+                'پٹیل': 'Patel ',
+                'شاہ': 'Shah ',
+                'کمار': 'Kumar ',
+                'گجرات': 'Gujarat ',
+                'سومانی': 'Somani ',
+                'پرمار': 'Parmar ',
+                'ٹھاکر': 'Thakur ',
+                'گہلوت': 'Gahlot ',
+                'کھنڈالہ': 'Khandala ',
+                'سین': 'Sen ',
+                'ویاس': 'Vyas ',
+                'دیشمکھ': 'Deshmukh ',
+                'چوہان': 'Chauhan ',
+                'گوالیا': 'Gwaliya ',
+                'موتھیا': 'Mothia ',
+                'ناتھ': 'Nath ',
+                'داس': 'Das ',
+                'مالو': 'Maloo ',
+                'جین': 'Jain ',
+                'کماری': 'Kumari ',
+                'راجپوت': 'Rajput ',
+                'گوسوامی': 'Goswami ',
+                'موہنی': 'Mohini ',
+                'توپا': 'Topa ',
+                'مہر': 'Mehr ',
+                'فرنانڈز': 'Fernandes ',
+                'کینیڈی': 'Kennedy ',
+                'ایوانز': 'Evans ',
+                'لیز': 'Lez ',
+                'گلابی': 'Gilbert ',
+                'پریرا': 'Pereira ',
+                'بٹ': 'Butt ',
+                'ڈاکا': 'Dakka ',
+                'فیلیکس': 'Felix ',
+                'شروڈنر': 'Schroeder ',
+                'مارتن': 'Martin ',
+                'اسٹورٹ': 'Stewart ',
+                'کریم': 'Kreem ',
+                'وارڈ': 'Ward ',
+                
+                // Popular Names (Other Cultures)
+                'الیاس': 'Elias ',
+                'اولیور': 'Oliver ',
+                'کائیل': 'Kyle ',
+                'ریان': 'Ryan ',
+                'مائیکل': 'Michael ',
+                'جان': 'John ',
+                'میگن': 'Megan ',
+                'ایڈم': 'Adam ',
+                'کرسٹوفر': 'Christopher ',
+                'سیموئیل': 'Samuel ',
+                'لیام': 'Liam ',
+                'ہیری': 'Harry ',
+                'تومو': 'Tomo ',
+                'ناتان': 'Nathan ',
+                'ایسا': 'Isa ',
+                'کیری': 'Kerry ',
+                'کیون': 'Kevin ',
+                'ڈینیل': 'Daniel ',
+                'وینسیا': 'Venicia ',
+                'کارمین': 'Carmen ',
+                'میچل': 'Mitchell ',
+                'بین': 'Ben ',
+                'سام': 'Sam ',
+                'جینی': 'Jenny ',
+                'ہانک': 'Hank ',
+                'نیل': 'Neil ',
+                'الیشا': 'Alicia ',
+                'سوریا': 'Surya ',
+                'ہنری': 'Henry ',
+                'فلورنس': 'Florence ',
+                'سوفیا': 'Sophia ',
+                'لوسی': 'Lucy ',
+                'لارا': 'Lara ',
+                'کیلی': 'Kelly ',
+                'جیمز': 'James ',
+                'الینا': 'Alina ',
+                'ڈریو': 'Drew ',
+                'نیل': 'Neel ',
+                'ایلیس': 'Elysse ',
+                'جیفری': 'Geoffrey ',
+                'اسکار': 'Oscar ',
+                'گابریل': 'Gabriel ',
+                'دیانا': 'Diana ',
+                'کارل': 'Carl ',
+                'آریا': 'Arya ',
+                'ولیم': 'William ',
+                'لوکا': 'Luca ',
+                'جانٹلی': 'Janetly ',
+                'لائلا': 'Leila ',
+                'ماریا': 'Maria ',
+                'لیزا': 'Lisa ',
+                'میرے': 'Mireya ',
+                'سیمونا': 'Simona ',
+                'گای': 'Guy ',
+                'جارج': 'George ',
+                'آسٹریا': 'Austria ',
+                'جیسے': 'Jace ',
+                'برین': 'Bryan ',
+                'کلارک': 'Clark ',
+                'جسیکا': 'Jessica ',
+                'ڈینا': 'Dina ',
+                'جوہانا': 'Johanna ',
+                'مری': 'Mary ',
+                'ایریا': 'Eria ',
+                'چاندنی': 'Chandni ',
+                'سنی': 'Sunny ',
+                'لیلا': 'Leila ',
+                'کیہا': 'Kira ',
+                'کمیلا': 'Camila ',
+                'نورا': 'Nora ',
+                'آلیسیا': 'Alicia ',
+                'کارینا': 'Karina ',
+                'لیا': 'Lia ',
+                'لینڈن': 'Landon ',
+                'لورا': 'Laura ',
+                'ایلن': 'Ellen ',
+                'ریمونڈ': 'Raymond ',
+                'نوح': 'Noah ',
+                'برٹنی': 'Brittany ',
+                'وسیم': 'Waseem ',
+                'کریش': 'Krish ',
+                'زین': 'Zain ',
+                'سیا': 'Sia ',
+                'گلن': 'Glen ',
+                'ایرک': 'Eric ',
+                'ایڈورڈ': 'Edward ',
+                'ہال': 'Hall ',
+                
+                // Indian Names
+                'دیو': 'Dev ',
+                'آریان': 'Aryan ',
+                'ویر': 'Veer ',
+                'راج': 'Raj ',
+                'دھیر': 'Dheer ',
+                'روہن': 'Rohan ',
+                'کمل': 'Kamal ',
+                'سید': 'Syed ',
+                'سونال': 'Sonal ',
+                'آرون': 'Arun ',
+                'ویرات': 'Virat ',
+                'شریا': 'Shreya ',
+                'نریندر': 'Narendra ',
+                'کرن': 'Karan ',
+                'راجیو': 'Rajiv ',
+                'چندر': 'Chandra ',
+                'روہیت': 'Rohit ',
+                'سیمین': 'Samin ',
+                'نیہا': 'Neha ',
+                'پریا': 'Priya ',
+                'وشال': 'Vishal ',
+                'ایشور': 'Ishwar ',
+                'ریانا': 'Riyana ',
+                'ابیشیک': 'Abhishek ',
+                'نیتن': 'Nitin ',
+                'نیرج': 'Neeraj ',
+                'رام': 'Ram ',
+                'آرچنا': 'Archana ',
+                'کوشک': 'Koushik ',
+                'منیش': 'Manish ',
+                'گورو': 'Guru ',
+                'ویرن': 'Viren ',
+                'دیویا': 'Divya ',
+                'نکھات': 'Nikhath ',
+                'شاہد': 'Shaad ',
+                'نریش': 'Naresh ',
+                'سنجے': 'Sanjay ',
+                'جوہی': 'Juhi ',
+                'سکینہ': 'Sakina ',
+                'میتھلی': 'Mithali ',
+                'ہینا': 'Heena ',
+                'رینا': 'Reena ',
+                'شمالا': 'Shamala ',
+                'رادھا': 'Radha ',
+                'لکشمی': 'Lakshmi ',
+                'پریتم': 'Preetam ',
+                'سمن': 'Suman ',
+                'پرکاش': 'Prakash ',
+                'آکاش': 'Akash ',
+                'پونم': 'Poonam ',
+                'یش': 'Yash ',
+                'شانتانُ': 'Shantan ',
+                'انیتا': 'Anita ',
+                'کیرن': 'Kiran ',
+                'گیتا': 'Geeta ',
+                'سبھاش': 'Subhash ',
+                'بھرت': 'Bharat ',
+                'یویش': 'Yuvish ',
+                'منجو': 'Manju ',
+                'انوکھی': 'Anokhi ',
+                'چیتن': 'Chetan ',
+                'ارجن': 'Arjun ',
+                'نارتھ': 'Narth ',
+                
+                // Body Parts
+                'سر': 'Sar',
+                'آنکھ': 'Aankh',
+                'ناک': 'Naak',
+                'کان': 'Kaan',
+                'منہ': 'Munh',
+                'زبان': 'Zubaan',
+                'ہاتھ': 'Haath',
+                'پاؤں': 'Paaon',
+                'دل': 'Dil',
+                'دماغ': 'Dimaag',
+                'گھٹنے': 'Ghutnay',
+                'پیٹھ': 'Peeth',
+                'انگلی': 'Ungli',
+                'چہرہ': 'Chehra',
+            
+                // Animals
+                'کتا': 'Kutta',
+                'بلی': 'Billi',
+                'گھوڑا': 'Ghora',
+                'گائے': 'Gaye',
+                'بکرا': 'Bakra',
+                'مرغی': 'Murghi',
+                'بطخ': 'Batakh',
+                'اونٹ': 'Oont',
+                'شیر': 'Sher',
+                'ہاتھی': 'Haathi',
+                'بھیڑ': 'Bheerh',
+                'چڑیا': 'Chiriya',
+                'مچھلی': 'Machhli',
+                'خرگوش': 'Khargosh',
+            
+                // Places
+                'اسکول': 'School',
+                'کالج': 'College',
+                'یونیورسٹی': 'University',
+                'مسجد': 'Masjid',
+                'مندر': 'Mandir',
+                'چرچ': 'Church',
+                'بازار': 'Bazaar',
+                'مارکیٹ': 'Market',
+                'پارک': 'Park',
+                'ہسپتال': 'Hospital',
+                'ریسٹورنٹ': 'Restaurant',
+                'بینک': 'Bank',
+                'پٹرول پمپ': 'Petrol Pump',
+                'سڑک': 'Sadak',
+                'گلی': 'Gali',
+            
+                // Weather & Nature
+                'موسم': 'Mausam',
+                'سورج': 'Sooraj',
+                'چاند': 'Chaand',
+                'ستارے': 'Sitaare',
+                'بادل': 'Baadal',
+                'بارش': 'Baarish',
+                'ہوا': 'Hawa',
+                'گرمی': 'Garmi',
+                'سردی': 'Sardi',
+                'بہار': 'Bahaar',
+                'خزاں': 'Khizaan',
+                'درخت': 'Darakht',
+                'پھول': 'Phool',
+                'پودا': 'Poda',
+                'ندی': 'Nadi',
+                
+                // Colors
+                'سرخ': 'Surkh',
+                'نیلا': 'Neela',
+                'سبز': 'Sabz',
+                'پیلا': 'Peela',
+                'کالا': 'Kala',
+                'سفید': 'Safaid',
+                'بھورا': 'Bhoora',
+                'جامنی': 'Jamni',
+                'نارنجی': 'Naranji',
+                'گلابی': 'Gulaabi',
+            
+                // Time & Date
+                'صبح': 'Subah',
+                'دوپہر': 'Dopehar',
+                'شام': 'Shaam',
+                'رات': 'Raat',
+                'دن': 'Din',
+                'ہفتہ': 'Hafta',
+                'مہینہ': 'Mahina',
+                'سال': 'Saal',
+                'کل': 'Kal',
+                'آج': 'Aaj',
+                'کل رات': 'Kal Raat',
+                'صبح سویرے': 'Subah Saweray',
+                'ابھی': 'Abhi', 
+                
+                // Directions
+                'شمال': 'Shumal',
+                'جنوب': 'Junoob',
+                'مشرق': 'Mashriq',
+                'مغرب': 'Maghrib',
+                'آگے': 'Aagay',
+                'پیچھے': 'Peechay',
+                'اوپر': 'Ooper',
+                'نیچے': 'Neeche',
+                'دائیں': 'Daayein',
+                'بائیں': 'Baayein', 
+                
+                //Occupations 
+                'استاد': 'Ustaad',
+                'ڈاکٹر': 'Doctor',
+                'انجینئر': 'Engineer',
+                'نرس': 'Nurse',
+                'پولیس والا': 'Police Wala',
+                'سپاہی': 'Sipahi',
+                'کسان': 'Kisaan',
+                'مزدور': 'Mazdoor',
+                'دکاندار': 'Dukandaar',
+                'ڈرائیور': 'Driver',
+                'باورچی': 'Bawarchi',
+                'جج': 'Judge',
+                'صحافی': 'Sahafi',
+                'فنکار': 'Fankaar',
+                'میکینک': 'Mechanic',
+                'پروفیسر': 'Professor',
+                'طالب علم': 'Talib e Ilm',
+                'لائبریرین': 'Librarian',
+                'اداکار': 'Adakaar',
+                'موسیقار': 'Mosiqaar', 
+                
+                //Clothing & Accessories
+                'قمیض': 'Qameez',
+                'پینٹ': 'Pant',
+                'ٹوپی': 'Topi',
+                'دوپٹہ': 'Dupatta',
+                'جوتے': 'Jootay',
+                'چپل': 'Chappal',
+                'سویٹر': 'Sweater',
+                'چادر': 'Chadar',
+                'ساڑھی': 'Saree',
+                'کرتا': 'Kurta',
+                'پاجامہ': 'Pajama',
+                'کوٹ': 'Coat',
+                'بیلٹ': 'Belt',
+                'چشمہ': 'Chashma',
+                'دستانے': 'Dastanay',
+                'گھڑی': 'Ghadi',
+                'بٹن': 'Button',
+                'زیور': 'Zewar',
+                'انگوٹھی': 'Angoothi',
+                'نیکلس': 'Necklace', 
+                
+                //Food Items
+                'روٹی': 'Roti',
+                'چاول': 'Chawal',
+                'دال': 'Daal',
+                'سبزی': 'Sabzi',
+                'گوشت': 'Gosht',
+                'مرغی': 'Murghi',
+                'انڈہ': 'Anda',
+                'دودھ': 'Doodh',
+                'چائے': 'Chai',
+                'پانی': 'Pani',
+                'جوس': 'Juice',
+                'پھل': 'Phal',
+                'سیب': 'Saib',
+                'کیلا': 'Kela',
+                'انگور': 'Angoor',
+                'آم': 'Aam',
+                'پکوڑے': 'Pakoray',
+                'حلوہ': 'Halwa',
+                'کیک': 'Cake',
+                'بسکٹ': 'Biscuit', 
+                
+                //Transportation
+                'گاڑی': 'Gaari',
+                'موٹر سائیکل': 'Motorcycle',
+                'بس': 'Bus',
+                'ٹرین': 'Train',
+                'جہاز': 'Jahaaz',
+                'سائیکل': 'Cycle',
+                'رکشہ': 'Rickshaw',
+                'ٹیکسی': 'Taxi',
+                'کشتی': 'Kashti',
+                'ویگن': 'Wagon',
+                'ٹرک': 'Truck',
+                'ایمبولینس': 'Ambulance',
+                'ہوائی جہاز': 'Hawai Jahaaz',
+                'کار': 'Car',
+                'موٹر': 'Motor',
+                'چنگچی': 'Chingchi',
+                'پیدل': 'Paidal', 
+                
+                //Technology
+                'کمپیوٹر': 'Computer',
+                'لیپ ٹاپ': 'Laptop',
+                'موبائل': 'Mobile',
+                'ٹی وی': 'TV',
+                'کی بورڈ': 'Keyboard',
+                'ماؤس': 'Mouse',
+                'انٹرنیٹ': 'Internet',
+                'وائی فائی': 'WiFi',
+                'چارجر': 'Charger',
+                'ہیڈ فون': 'Headphones',
+                'مائیکروفون': 'Microphone',
+                'ویب کیم': 'Webcam',
+                'پرنٹر': 'Printer',
+                'سافٹ ویئر': 'Software',
+                'ہارڈ ویئر': 'Hardware',
+                'ایپ': 'App',
+                'ویب سائٹ': 'Website',
+                
+                // Tools & Chores
+                'جھاڑو': 'Jharoo',
+                'پوچھا': 'Poocha',
+                'ڈنڈا': 'Danda',
+                'کاںٹا': 'Kaanta',
+                'چاقو': 'Chaaku',
+                'توا': 'Tawa',
+                'کڑاہی': 'Karahi',
+                'پتیلا': 'Patila',
+                'بالٹی': 'Balti',
+                'برتن': 'Bartan',
+                'کپڑے دھونا': 'Kapray dhona',
+                'صفائی کرنا': 'Safai karna',
+                'پکانا': 'Pakaana',
+                'جھاڑ پونچھ': 'Jhaar Ponchh',
+                
+                // Shapes & Measurements
+                'گول': 'Gol',
+                'چوکور': 'Chokor',
+                'تکون': 'Tikon',
+                'لمبا': 'Lamba',
+                'چوڑا': 'Chora',
+                'چھوٹا': 'Chhota',
+                'بڑا': 'Bara',
+                'کلو': 'Kilo',
+                'گرام': 'Gram',
+                'لیٹر': 'Litre',
+                'فٹ': 'Foot',
+                'انچ': 'Inch',
+                'میٹر': 'Meter',
+                'ڈبہ': 'Dabba',
+                'بوتل': 'Bottle',
+                
+                // Materials
+                'لکڑی': 'Lakri',
+                'پتھر': 'Pathar',
+                'پلاسٹک': 'Plastic',
+                'لوہا': 'Loha',
+                'کپڑا': 'Kapra',
+                'کانچ': 'Kaanch',
+                'کاغذ': 'Kaghaz',
+                'مٹی': 'Mitti',
+                'سیمنٹ': 'Cement',
+                'ریت': 'Rait',
+                'شیشہ': 'Sheesha',
+                'چونا': 'Choona',
+                'ربڑ': 'Rubber',
+                
+                // Festivals & Celebrations
+                'عید': 'Eid',
+                'بقرعید': 'Bakra Eid',
+                'عید میلاد': 'Eid Milad',
+                'رمضان': 'Ramzan',
+                'شب برات': 'Shab-e-Barat',
+                'شب قدر': 'Shab-e-Qadr',
+                'نکاح': 'Nikkah',
+                'سالگرہ': 'Salgirah',
+                'دعوت': 'Dawat',
+                'تقریب': 'Taqreeb',
+                'جشن': 'Jashn',
+                'عید الفطر': 'Eid-ul-Fitr',
+                'عید الاضحیٰ': 'Eid-ul-Adha',
+                'کرسمس': 'Christmas',
+                'دیوالی': 'Diwali',
+                'ہولی': 'Holi',
+                'بیساکھی': 'Baisakhi',
+                'گرونانک جینتی': 'Guru Nanak Jayanti',
+                'رکشا بندھن': 'Raksha Bandhan',
+                'جشن نو روز': 'Nowruz',
+                'یسوع کا جنم دن': 'Birth of Jesus',
+                'پاس اوور': 'Passover',
+                'یوم آزادی': 'Independence Day',
+                
+                // Sports
+                'کرکٹ': 'Cricket',
+                'فٹبال': 'Football',
+                'ہاکی': 'Hockey',
+                'ٹینس': 'Tennis',
+                'بیڈمنٹن': 'Badminton',
+                'والی بال': 'Volleyball',
+                'باسکٹ بال': 'Basketball',
+                'ریس': 'Race',
+                'جمناسٹک': 'Gymnastics',
+                'کبڈی': 'Kabaddi',
+                'کشتی': 'Wrestling',
+                'دوڑ': 'Dour',
+                'گولف': 'Golf',
+                'باکسنگ': 'Boxing',
+                
+                    
+                // School & Education
+                'کتاب': 'Kitaab',
+                'قلم': 'Qalam',
+                'کاپی': 'Kaapi',
+                'بورڈ': 'Board',
+                'استاد': 'Ustaad',
+                'طالب علم': 'Taalib e Ilm',
+                'سبق': 'Sabaq',
+                'جماعت': 'Jamaat',
+                'سوال': 'Sawal',
+                'جواب': 'Jawab',
+                'پرچہ': 'Parcha',
+                'امتحان': 'Imtihaan',
+                'نتیجہ': 'Nateeja',
+                'یاد کرنا': 'Yaad Karna',
+                'پڑھائی': 'Parhai',
+                
+                // Furniture
+                'میز': 'Mez',
+                'کرسی': 'Kursi',
+                'بیڈ': 'Bed',
+                'صوفہ': 'Sofa',
+                'الماری': 'Almari',
+                'ڈریسنگ ٹیبل': 'Dressing Table',
+                'چئیر': 'Chair',
+                'میز پوش': 'Mez Posh',
+                'دروازہ': 'Darwaza',
+                'قالین': 'Qaleen',
+                'رگ': 'Rug',
+                'شیلف': 'Shelf',
+                'سٹول': 'Stool',
+                'ڈیسک': 'Desk',
+                
+                // Food & Drinks
+                'کھانا': 'Khaana',
+                'پانی': 'Pani',
+                'دودھ': 'Doodh',
+                'چائے': 'Chai',
+                'کافی': 'Coffee',
+                'جوس': 'Juice',
+                'روٹی': 'Roti',
+                'چاول': 'Chawal',
+                'گوشت': 'Gosht',
+                'سبزی': 'Sabzi',
+                'دال': 'Daal',
+                'پھل': 'Phal',
+                'انڈا': 'Anda',
+                'نمک': 'Namak',
+                'مرچ': 'Mirch',
+                'چینی': 'Cheeni',
+                'مٹھائی': 'Mithai',
+                'کیک': 'Cake',
+                'برگر': 'Burger',
+                'پیزا': 'Pizza',
+                'بسکٹ': 'Biscuit',
+                'سلاد': 'Salad',
+                'پکوڑے': 'Pakoray',
+                'سموسہ': 'Samosa',
+        
+                // Transport Infrastructure
+                'سڑک': 'Sarak',
+                'پل': 'Pul',
+                'اسٹیشن': 'Station',
+                'بس اسٹاپ': 'Bus Stop',
+                'ایئرپورٹ': 'Airport',
+                'پٹرول پمپ': 'Petrol Pump',
+                'پارکنگ': 'Parking',
+                'ٹریفک سگنل': 'Traffic Signal',
+                'راستہ': 'Raasta',
+                'چوراہا': 'Chauraha',
+                'گاڑیوں کا شور': 'Gariyon ka shor',
+                'پیدل راستہ': 'Paidal Raasta',
+                
+                // Classroom Objects
+                'ڈیسک': 'Desk',
+                'بورڈ': 'Board',
+                'مارکر': 'Marker',
+                'چاک': 'Chalk',
+                'ڈسٹر': 'Duster',
+                'کتاب': 'Kitaab',
+                'کاپی': 'Kaapi',
+                'پینسل': 'Pencil',
+                'ربر': 'Rubber',
+                'کٹر': 'Cutter',
+                'پین': 'Pen',
+                'ڈائری': 'Diary',
+                'کرسیاں': 'Kursiyan',
+                'ٹیچر کی میز': 'Teacher ki Mez',
+                
+                // Plants
+                'پودا': 'Poda',
+                'درخت': 'Darakht',
+                'پھول': 'Phool',
+                'پتے': 'Patte',
+                'گھاس': 'Ghaas',
+                'بیج': 'Beej',
+                'تنا': 'Tana',
+                'جڑ': 'Jarh',
+                'پھل دار پودا': 'Phal Daar Poda',
+                'سبزیوں کا پودا': 'Sabziyon ka Poda',
+                'پھولدار پودا': 'Phool Daar Poda',
+                
+                
+                // Phrasal Verbs / Compound Verbs
+                'نمٹا دینا': 'Nimta dena',
+                'سما جانا': 'Sama jana',
+                'بپا ہونا': 'Bappa hona',
+                'جھڑک دینا': 'Jhatak dena',
+                'ہاتھ کھڑا کرنا': 'Haath khada karna',
+                
+                // Blessings & Prayers
+                'ماشاءاللہ': 'MashaAllah',
+                'الحمدللہ': 'Alhamdulillah',
+                'جزاک اللہ': 'JazakAllah',
+                'رب راکھا': 'Rab Rakha',
+                'اللہ حافظ': 'Allah Hafiz',
+                
+                // Commands & Requests
+                'آو': 'Aao',
+                'بیٹھو': 'Baitho',
+                'خاموش رہو': 'Khamosh raho',
+                'براہِ مہربانی انتظار کریں': 'Barah-e-mehrbani intezaar karein',
+                'دروازہ بند کر دو': 'Darwaza band kar do',
+                
+                // Cooking Terms & Utensils
+                'کڑک کرنا': 'Karak karna',
+                'بھوننا': 'Bhoonna',
+                'چمچہ': 'Chammach',
+                'چھلنی': 'Chhalni',
+                'کڑاہی': 'Kadhai',
+                
+                // Health & Medical Terms
+                'سر درد': 'Sar dard',
+                'کھانسی': 'Khansi',
+                'اسپریے': 'Spray',
+                'سنسکپ': 'Sunscreen',
+                'ڈاکٹر': 'Doctor',
+                
+                // Legal & Official Terms
+                'گواہ': 'Gawah',
+                'عدالت': 'Adalat',
+                'وکیل': 'Wakeel',
+                'دستخط': 'Dastakhat',
+                'قانون': 'Qanoon',
+                
+                // Error-Correction Pairs
+                'لِکھنا': 'Likhna',
+                'لگانا': 'Lagana',
+                'پڑھنا': 'Parhna',
+                'سننا': 'Sunna',
+                'بولنا': 'Bolna',
+                
+                // Measurement Units (Extended)
+                'مائیکروگرام': 'Microgram',
+                'نیوٹن': 'Newton',
+                'ڈگری سینٹی گریڈ': 'Degree Celsius',
+                'میٹر': 'Meter',
+                'کلوگرام': 'Kilogram',
+                
+                // Mythological / Cultural References
+                'راجہ': 'Raja',
+                'راجکماری': 'Rajkumari',
+                'پنڈت': 'Pandit',
+                'مائی': 'Mai',
+                'جن': 'Jinn',
+                
+                // Geographical Terms
+                'ہمالیہ': 'Himalayas',
+                'کلاش': 'Kailash',
+                'دریا': 'River',
+                'نہر': 'Canal',
+                'صحرا': 'Desert',
+                'جنگل': 'Forest',
+                'جزیرہ': 'Island',
+                'سمندر': 'Ocean',
+                'خلیج': 'Bay',
+                'پہاڑ': 'Mountain',
+                'دریا': 'River',
+                'چٹان': 'Rock',
+                'دریاچه': 'Lake',
+                'واسطہ': 'River Mouth',
+                
+                // Nature & Environment
+                'آگ': 'Fire',
+                'پانی': 'Water',
+                'ہوا': 'Air',
+                'زمین': 'Earth',
+                'پھول': 'Flower',
+                'درخت': 'Tree',
+                'دھواں': 'Smoke',
+                'برف': 'Snow',
+                'بارش': 'Rain',
+                'دھوپ': 'Sunshine',
+                'دھند': 'Fog',
+                'ہوا': 'Wind',
+                'آندھی': 'Storm',
+                'خشک': 'Dry',
+                'سرد': 'Cold',
+                'گرمی': 'Hot',
+                'دریا': 'Sea',
+                'خلیج': 'Gulf',
+                
+                // Cultural & Religious Terms
+                'مسجد': 'Mosque',
+                'چرچ': 'Church',
+                'مندرج': 'Temple',
+                'پوجا': 'Puja',
+                'عید': 'Eid',
+                'کرسمس': 'Christmas',
+                'دیوالی': 'Diwali',
+                'ہولی': 'Holi',
+                'رشتہ': 'Relationship',
+                'ولی': 'Saint',
+                'مکتبہ': 'School (Religious)',
+                'کافر': 'Non-believer',
+                'مسلمان': 'Muslim',
+                'ہندو': 'Hindu',
+                'سکھ': 'Sikh',
+                'یہودی': 'Jew',
+                'بائبل': 'Bible',
+                'قرآن': 'Quran',
+                
+                // Social Media & Internet Slang
+                'فیس بک': 'Facebook',
+                'انسٹاگرام': 'Instagram',
+                'ٹویٹر': 'Twitter',
+                'یوٹیوب': 'YouTube',
+                'لنکڈ ان': 'LinkedIn',
+                'ٹک ٹاک': 'TikTok',
+                'ویب سائٹ': 'Website',
+                'ویڈیو': 'Video',
+                'پوسٹ': 'Post',
+                'لائک': 'Like',
+                'فالو': 'Follow',
+                'شیئر': 'Share',
+                'چٹ چیٹ': 'Chat',
+                'ای میل': 'Email',
+                'مسیج': 'Message',
+                'ویڈیمو': 'Webcam',
+                'ہیش ٹیگ': 'Hashtag',
+                
+                // Academic Terms
+                'ریاضی': 'Mathematics',
+                'سائنس': 'Science',
+                'تاریخ': 'History',
+                'ادب': 'Literature',
+                'انگریزی': 'English',
+                'اردو': 'Urdu',
+                'فزکس': 'Physics',
+                'کیمیا': 'Chemistry',
+                'بیالوجی': 'Biology',
+                'جغرافیہ': 'Geography',
+                'نظریہ': 'Theory',
+                'عمل': 'Practice',
+                'امتحان': 'Exam',
+                'کلاس': 'Class',
+                'اساتذہ': 'Teachers',
+                'طالب علم': 'Student',
+                'کتاب': 'Book',
+                'پروجیکٹ': 'Project',
+                'دستیاب': 'Available',
+                
+                // Financial Terms
+                'ڈالر': 'Dollar',
+                'روپیہ': 'Rupee',
+                'پاؤنڈ': 'Pound',
+                'یورو': 'Euro',
+                'بینک اکاؤنٹ': 'Bank Account',
+                'قرضہ': 'Loan',
+                'جمع': 'Deposit',
+                'بینک': 'Bank',
+                'شعبہ': 'Branch',
+                'سود': 'Interest',
+                'سرمایہ کاری': 'Investment',
+                'کاروبار': 'Business',
+                'خریداری': 'Purchase',
+                'منافع': 'Profit',
+                'خسارہ': 'Loss',
+                'چیک': 'Check',
+                'پیسہ': 'Money',
+                'ٹیکس': 'Tax',
+                'کرنسی': 'Currency',
+                'شیئر': 'Share',
+                'بانڈ': 'Bond',
+                
+                // Events & Occasions
+                'سالگرہ': 'Birthday',
+                'شادی': 'Wedding',
+                'دفتر کا افتتاح': 'Office Inauguration',
+                'ڈنر پارٹی': 'Dinner Party',
+                'ملاقات': 'Meeting',
+                'کامیابی': 'Success Celebration',
+                'ریٹائرمنٹ پارٹی': 'Retirement Party',
+                'سیمی نار': 'Seminar',
+                'کانفرنس': 'Conference',
+                'ڈنر': 'Dinner',
+                'فیسٹیول': 'Festival',
+                'بہترین کارکردگی': 'Best Performance',
+                'انعام کی تقریب': 'Award Ceremony',
+                'خصوصی تقریب': 'Special Event',
+                'جشن': 'Celebration',
+                
+                // Popular Countries
+                'بھارت': 'India',
+                'چین': 'China',
+                'امریکہ': 'United States',
+                'برطانیہ': 'United Kingdom',
+                'کینیڈا': 'Canada',
+                'آسٹریلیشیا': 'Australia',
+                'فرانس': 'France',
+                'جرمنی': 'Germany',
+                'روس': 'Russia',
+                'جاپان': 'Japan',
+                'مصر': 'Egypt',
+                'نیلینڈ': 'New Zealand',
+                'نیپال': 'Nepal',
+                'سعودی عرب': 'Saudi Arabia',
+                'ترکی': 'Turkey',
+                'ایران': 'Iran',
+                'اسپین': 'Spain',
+                'پاکستان': 'Pakistan',
+                'اٹلی': 'Italy',
+                'جنوبی افریقہ': 'South Africa', 
+                
+                //Patriotic Slogans
+                'جئے ہند': 'Jai Hind',
+                'انقلاب زندہ باد': 'Inquilab Zindabad',
+                'وندے ماترم': 'Vande Mataram',
+                'بھارت ماتا کی جئے': 'Bharat Mata Ki Jai',
+                'ستیمیو جیتے': 'Satyamev Jayate',
+                'جئے جوان، جئے کسان': 'Jai Jawan, Jai Kisan',
+                'آتم نربھر بھارت': 'Aatmanirbhar Bharat',
+                'سرورے بھونتو سکھی نہ': 'Sarve Bhavantu Sukhinah',
+                'نمستے بھارت': 'Namaste Bharat',
+                'جئے ویر شیواجی': 'Jai Veer Shivaji',
+                'ہم بھارت کے لوگ': 'Hum Bharat Ke Log',
+                'جن گن من': 'Jana Gana Mana',
+                'ایک بھارت شریشٹھ بھارت': 'Ek Bharat Shreshth Bharat',
+                'آئین دن': 'Samvidhan Divas',
+                
+                // Cultural Heritage & Art Forms
+                'بھرت نٹیم': 'Bharatanatyam',
+                'کتھک': 'Kathak',
+                'تبلہ': 'Tabla',
+                'ستار': 'Sitar',
+                'مدھوبنی آرٹ': 'Madhubani Art',
+                'وارلی پینٹنگ': 'Warli Painting',
+                
+                // Religious Places
+                'ویشنو دیوی': 'Vaishno Devi',
+                'گولڈن ٹیمپل': 'Golden Temple',
+                'تروپتی بالاجی': 'Tirupati Balaji',
+                'مکہ مسجد': 'Mecca Masjid',
+                
+                // Indian Cuisine
+                'سموسہ': 'Samosa',
+                'بریانی': 'Biryani',
+                'چائے': 'Chai',
+                'پانی پوری': 'Pani Puri',
+                'بٹر چکن': 'Butter Chicken',
+                'پنیرو ٹکہ': 'Paneer Tikka',
+                
+                // Indian Languages
+                'ہندی': 'Hindi',
+                'پنجابی': 'Punjabi',
+                'تمل': 'Tamil',
+                'مہاراشٹری': 'Marathi',
+                'بنگالی': 'Bengali',
+                'کنڑ': 'Kannada',
+                
+                // Famous Indian Authors
+                'رابندر ناتھ ٹیگور': 'Rabindranath Tagore',
+                'ر.ک. ناراین': 'R.K. Narayan',
+                'چیتن بھگت': 'Chetan Bhagat',
+                'رسکن بانڈ': 'Ruskin Bond',
+                'کالی داس': 'Kalidasa',
+                
+                // Sports Personalities
+                'سچن تندولکر': 'Sachin Tendulkar',
+                'ویرات کوہلی': 'Virat Kohli',
+                'پی وی سندھو': 'PV Sindhu',
+                'ملکہ سنگھ': 'Milkha Singh',
+                'لیندر پیز': 'Leander Paes',
+                
+                // Famous Bollywood Movies/Stars
+                'شاہ رخ خان': 'Shah Rukh Khan',
+                'امیتابھ بچن': 'Amitabh Bachchan',
+                'سلمان خان': 'Salman Khan',
+                'دل والے دلہنیا لے جائیں گے': 'Dilwale Dulhania Le Jayenge',
+                
+                // Indian States and Capitals
+                'اتر پردیش': 'Uttar Pradesh',
+                'مہاراشٹر': 'Maharashtra',
+                'تمل نادو': 'Tamil Nadu',
+                'چنئی': 'Chennai',
+                'لکھنؤ': 'Lucknow',
+                'ممبئی': 'Mumbai',
+                
+                // Famous Landmarks (International)
+                'ایفل ٹاور': 'Eiffel Tower',
+                'چائنا کی عظیم دیوار': 'Great Wall of China',
+                'آزادی کا مجسمہ': 'Statue of Liberty',
+                'سڈنی اوپیرا ہاؤس': 'Sydney Opera House',
+                
+                // Indian Monuments
+                'قطب مینار': 'Qutub Minar',
+                'سرخ قلعہ': 'Red Fort',
+                'انڈیا گیٹ': 'India Gate',
+                'گیٹ وے آف انڈیا': 'Gateway of India',
+                'رشتہ پتی بھون': 'Rashtrapati Bhavan',
+                
+                // Freedom Fighters
+                'بھگت سنگھ': 'Bhagat Singh',
+                'سبھاش چندر بوس': 'Subhas Chandra Bose',
+                'چندر شیکھر ازاد': 'Chandra Shekhar Azad',
+                'مہاتما گاندھی': 'Mahatma Gandhi',
+                'سردار پٹیل': 'Sardar Patel',
+                'لالہ لجپت رائے': 'Lala Lajpat Rai',
+                'جواہر لال نہرو': 'Jawaharlal Nehru',
+                'سروجنی نائیڈو': 'Sarojini Naidu',
+                'راج گرو': 'Rajguru',
+                'رانی لکشمی بائی': 'Rani Lakshmi Bai',
+                'کرن سنگھ': 'Karan Singh',
+                'گاندھی جی': 'Gandhi Ji',
+                'گورو گوونڈ سنگھ': 'Guru Gobind Singh',
+                'دھان سنگھ': 'Dhan Singh',
+                'آنجہانی اوہ': 'Anjanee Oh',
+                
+                // Indian Kings
+                'اکبر': 'Akbar',
+                'شاہجہاں': 'Shah Jahan',
+                'جہانگیر': 'Jahangir',
+                'بابر': 'Babur',
+                'اورنگزیب': 'Aurangzeb',
+                'راجا رنجیت سنگھ': 'Raja Ranjit Singh',
+                'ہری سنگھ نالوا': 'Hari Singh Nalwa',
+                'سلیم': 'Salim',
+                'ٹائگرا سنگھ': 'Tigra Singh',
+                'چتر سنگھ': 'Chitra Singh',
+                'راجہ پرتاب سنگھ': 'Raja Pratap Singh',
+                'راجہ رام موہن رائے': 'Raja Ram Mohan Roy',
+                'نادر شاہ': 'Nader Shah',
+                'گلاب سنگھ': 'Gulab Singh',
+                'مارٹھا سلطنت': 'Maratha Empire',
+                'شورے سنگھ': 'Shorey Singh',
+                'راجا سوہن سنگھ': 'Raja Sohun Singh',
+                'شیوا جی': 'Shivaji',
+                'راجا بھور سنگھ': 'Raja Bhor Singh',
+                'قطب الدین ایبک': 'Qutub-ud-din Aibak',
+                'علاء الدین خلجی': 'Alauddin Khilji',
+                'ٹیپو سلطان': 'Tipu Sultan',
+                
+                
+                // Miscellaneous
+                'چابی': 'Chaabi',
+                'تالا': 'Taala',
+                'کاغذ': 'Kaghaz',
+                'بکس': 'Box',
+                'تصویر': 'Tasveer',
+                'شیشہ': 'Sheesha',
+                'درجہ حرارت': 'Darja Hararat',
+                'چڑیا گھر': 'Chirya Ghar',
+                'تاریخ': 'Tareekh',
+                'پتا': 'Pata',
+                'پتہ': 'Pata',
+                'نقشہ': 'Naqsha',
+                'لفافہ': 'Lifaafa',
+                'تکیہ': 'Takiya',
+                'کمبل': 'Kambal',
+  
+                
+                // Common Words (Roman Urdu)
+                'کچھ': 'Kuch',
+                'سمجھ': 'Samajh',
+                'شاید': 'Shayad',
+                'لیکن': 'Lekin',
+                'اور': 'Aur',
+                'پھر': 'Phir',
+                'کبھی': 'Kabhi',
+                'ہمیشہ': 'Hamesha',
+                'ابھی': 'Abhi',
+                'اب': 'Ab',
+                'یہ': 'Yeh',
+                'وہ': 'Woh',
+                'کیوں': 'Kyun',
+                'کیا': 'Kya',
+                'کیسا': 'Kaisa',
+                'کیسی': 'Kaisi',
+                'کہاں': 'Kahan',
+                'کس': 'Kis',
+                'کب': 'Kab',
+                'میں': 'Main',
+                'تو': 'Tu',
+                'تم': 'Tum',
+                'اپ': 'Aap',
+                'وہ': 'Woh',
+                'یہاں': 'Yahan',
+                'وہاں': 'Wahan',
+                'اوپر': 'Ooper',
+                'نیچے': 'Neeche',
+                'جلدی': 'Jaldi',
+                'دیر': 'Der',
+                'بہت': 'Bohat',
+                'تھوڑا': 'Thora',
+                'زیادہ': 'Zyada',
+                'کم': 'Kam',
+                'ٹھیک': 'Theek',
+                'غلط': 'Ghalat',
+                'اچھا': 'Acha',
+                'برا': 'Bura',
+                'پیار': 'Pyar',
+                'نفرت': 'Nafrat',
+                'دوست': 'Dost',
+                'دشمن': 'Dushman',
+                'سچ': 'Sach',
+                'جھوٹ': 'Jhoot',
+                'ہو': 'Ho',
+                'ہے': 'Hai',
+                'تھا': 'Tha',
+                'تھی': 'Thi',
+                'ہوں': 'Hoon',
+                'چاہیے': 'Chahiye',
+                'کرتا': 'Karta',
+                'کرتی': 'Karti',
+                'کرنا': 'Karna',
+                'دینا': 'Dena',
+                'لینا': 'Lena',
+                'چاہنا': 'Chahna',
+                'سمجھنا': 'Samajhna',
+                'دیکھنا': 'Dekhna',
+                'بولنا': 'Bolna',
+                'سننا': 'Sunnna',
+                'رکھنا': 'Rakhna',
+                'چلنا': 'Chalna',
+                'آنا': 'Aana',
+                'جانا': 'Jana',
+                'کہنا': 'Kehna',
+                'سوچنا': 'Sochna',
+                'بننا': 'Banna',
+                'کر': 'Kar',
+                'لے': 'Le',
+                'دے': 'De',
+                'یہی': 'Yehi',
+                'وہی': 'Wohi',
+                'سب': 'Sab',
+                'کسی': 'Kisi',
+                'کوئی': 'Koi',
+                'ہر': 'Har',
+                'اپنا': 'Apna',
+                'تمہارا': 'Tumhara',
+                'ہمارا': 'Hamara',
+                'انکا': 'Unka',
+                'اسکا': 'Uska',
+                'میرا': 'Mera',
+                'زندگی': 'Zindagi',
+                'دنیا': 'Duniya',
+                'بات': 'Baat',
+                'سو': 'So',
+                'یقین': 'Yaqeen',
+                'خواب': 'Khawab',
+                
+                // Conversational Fillers & Expressions
+                'ہاں': 'Haan',
+                'نہیں': 'Nahi',
+                'اچھا': 'Acha',
+                'اوہ': 'Oh',
+                'واہ': 'Wah',
+                'ہائے': 'Hai',
+                'چلو': 'Chalo',
+                'بس': 'Bas',
+                'کیا؟': 'Kya?',
+                'کیوں؟': 'Kyun?',
+                'کہاں؟': 'Kahan?',
+                'واقعی؟': 'Waqai?',
+                'سچ؟': 'Sach?',
+                'ارے': 'Arey',
+                'ہنہ': 'Hna',
+                'اوکے': 'Okay',
+                'ویسے': 'Waise',
+                'چپ': 'Chup',
+                'اوئے': 'Oye',
+                'چلو ٹھیک': 'Chalo theek',
+                'کمال ہے': 'Kamaal hai',
+                'مجھے نہیں پتا': 'Mujhe nahi pata',
+                'کیا بات ہے': 'Kya baat hai',
+                
+                // Common Daily Used Conversational Phrases (Roman Urdu)
+                ' رہے ': ' rahe ',
+                'آ رہا ہوں': 'Aa raha hoon',    
+                'ا رہا': 'Aa raha',
+                'رہا': 'raha',
+                'جا رہا ہے': 'Ja raha hai',
+                'بتا دو': 'Bata do',
+                'کر لو': 'Kar lo',
+                'لے لو': 'Le lo',
+                'دے دو': 'De do',
+                'لے آؤ': 'Le aao',
+                'پکڑ لو': 'Pakad lo',
+                'پھر سے': 'Phir se',
+                'یہ کیا ہے؟': 'Yeh kya hai?',
+                'کیا کر رہے ہو؟': 'Kya kar rahe ho?',
+                'کیا ہو رہا ہے؟': 'Kya ho raha hai?',
+                'کیا بات ہے؟': 'Kya baat hai?',
+                'کچھ نہیں': 'Kuch nahi',
+                'مجھے دو': 'Mujhe do',
+                'مجھے چاہیے': 'Mujhe chahiye',
+                'مجھے پتا ہے': 'Mujhe pata hai',
+                'مجھے نہیں پتا': 'Mujhe nahi pata',
+                'دھیان سے': 'Dhyaan se',
+                'ابھی آتا ہوں': 'Abhi aata hoon',
+                'ابھی آیا': 'Abhi aaya',
+                'سن لو': 'Sun lo',
+                'چپ رہو': 'Chup raho',
+                'ہاں نا؟': 'Haan na?',
+                'جلدی کرو': 'Jaldi karo',
+                'رکو ذرا': 'Ruko zara',
+                'او بھائی': 'O bhai',
+                'کیوں نہیں؟': 'Kyun nahi?',
+                'کچھ تو ہے': 'Kuch to hai',
+                'کیا مسئلہ ہے؟': 'Kya masla hai?',
+                'کب آؤ گے؟': 'Kab aao ge?',
+                'کہاں جا رہے ہو؟': 'Kahan ja rahe ho?',
+                'کب واپس آؤ گے؟': 'Kab wapas aao ge?',
+                'کیسے ہو؟': 'Kaise ho?',
+                'ٹھیک ہوں': 'Theek hoon',
+                'کیا ہوا؟': 'Kya hua?',
+                'چلو ٹھیک ہے': 'Chalo theek hai',
+                'میرے ساتھ آؤ': 'Mere saath aao',
+                'کچھ بول': 'Kuch bol',
+                'کام': 'Kaam',
+                'کیا سوچ رہے ہو؟': 'Kya soch rahe ho?',
+                
+                // Daily Conversation Words
+                'کچھ': 'Kuch',
+                'کسی': 'Kisi',
+                'کبھی': 'Kabhi',
+                'کہاں': 'Kahan',
+                'کیا': 'Kya',
+                'کیوں': 'Kyun',
+                'کیسا': 'Kaisa',
+                'ہاں': 'Haan',
+                'نہیں': 'Nahi',
+                'بس': 'Bas',
+                'چلو': 'Chalo',
+                'آو': 'Aao',
+                'جاو': 'Jao',
+                'دو': 'Do',
+                'لے لو': 'Le lo',
+                'بنا لو': 'Bana lo',
+                'بتا دو': 'Bata do',
+                'سن لو': 'Sun lo',
+                'دیکھو': 'Dekho',
+                'سن': 'Sun',
+                'ہو گیا': 'Ho gaya',
+                'پتا نہیں': 'Pata nahi',
+                'ضرور': 'Zaroor',
+                'جلدی': 'Jaldi',
+                'یقیناً': 'Yaqeenan',
+                'اچھا': 'Acha',
+                'یار': 'Yaar',
+                'بس کرو': 'Bas karo',
+                'پھر': 'Phir',
+                'چاہیے': 'Chahiye',
+                'کب': 'Kab',
+                'ابھی': 'Abhi',
+                'بعد میں': 'Baad mein',
+                'کہو': 'Kaho',
+                'رہنے دو': 'Rehne do',
+                'کرو': 'Karo',
+                'رکو': 'Ruko',
+                'چپ': 'Chup',
+                'چپ رہو': 'Chup raho',
+                'سچ': 'Sach',
+                'جھوٹ': 'Jhoot',
+                'مجھے': 'Mujhe',
+                'تمہیں': 'Tumhein',
+                'ہم': 'Hum',
+                'تم': 'Tum',
+                'میں': 'Main',
+                'وہ': 'Woh',
+                'ٹھیک ہے': 'Theek hai',
+                'اچھا لگا': 'Acha laga',
+                'ختم ہو گیا': 'Khatam ho gaya',
+                'ہو سکتا ہے': 'Ho sakta hai',
+                
+                // Common Slang & Expressive Words
+                'پاگل': 'Pagal',
+                'الو': 'Ullu',
+                'بےوقوف': 'Bewaqoof',
+                'چپ کرو': 'Chup karo',
+                'ہٹو': 'Hato',
+                'جاہل': 'Jahil',
+                'ناکام': 'Nakaam',
+                'سست': 'Sust',
+                'پریشان': 'Pareshan',
+                'بیکار': 'Bekaar',
+                'دو نمبر': 'Do number',
+                'چلاک': 'Chalak',
+                'شاطر': 'Shaatir',
+                'سچ میں': 'Sach mein',
+                'حد ہے': 'Had hai',
+                'مزہ آیا': 'Maza aaya',
+                'اوے': 'Oye',
+                'واہ': 'Wah',
+                'ہائے': 'Haye',
+                'اف': 'Uff',
+                'اوہ': 'Oh',
+                'لعنت': 'Laanat',
+                'چور': 'Chor',
+                'دھوکہ': 'Dhokha',
+                'غصہ': 'Ghussa',
+                'ڈر': 'Dar',
+                'نیند': 'Neend',
+                'تھکاوٹ': 'Thakawat',
+                'بدمزہ': 'Badmaza',
+                'بدتمیز': 'Badtameez',
+                'جل گیا': 'Jal gaya',
+                'جل بھن گیا': 'Jal bhun gaya',
+                
+                // Positive Words
+                'خوبصورت': 'Khoobsurat',
+                'اچھا': 'Acha',
+                'بہترین': 'Behtareen',
+                'مزے دار': 'Mazay daar',
+                'پیارا': 'Pyara',
+                'خوش': 'Khush',
+                'کامیاب': 'Kaamyaab',
+                'ذہین': 'Zehin',
+                'محنتی': 'Mehnati',
+                'قابل': 'Qabil',
+                'پرسکون': 'Pursukoon',
+                'وفادار': 'Wafadaar',
+                'صاف': 'Saaf',
+                'ایماندار': 'Emaandaar',
+                'محترم': 'Mohtaram',
+                'دلکش': 'Dilkash',
+                'زندہ دل': 'Zinda dil',
+                'پر امید': 'Pur umeed',
+                
+                // Negative Words
+                'برا': 'Bura',
+                'گندا': 'Ganda',
+                'جھوٹا': 'Jhoota',
+                'نکما': 'Nikamma',
+                'کام چور': 'Kaam chor',
+                'بے کار': 'Bekaar',
+                'جاہل': 'Jahil',
+                'بدتمیز': 'Badtameez',
+                'سست': 'Sust',
+                'جلد باز': 'Jald baaz',
+                'بد مزاج': 'Bad mizaaj',
+                'خطرناک': 'Khatarnak',
+                'دھوکہ باز': 'Dhokay baaz',
+                'پریشان': 'Pareshan',
+                'ناکام': 'Nakaam',
+                'بدنام': 'Badnaam',
+                
+                // Neutral Words
+                'آدمی': 'Admi',
+                'خاتون': 'Khaatoon',
+                'چیز': 'Cheez',
+                'بات': 'Baat',
+                'لفظ': 'Lafz',
+                'وقت': 'Waqt',
+                'کام': 'Kaam',
+                'نام': 'Naam',
+                'دن': 'Din',
+                'رات': 'Raat',
+                'شخص': 'Shakhs',
+                'چہرہ': 'Chehra',
+                'سوچ': 'Soch',
+                'منظر': 'Manzar',
+                'حالت': 'Haalat',
+                'جگہ': 'Jagah',
+                'راستہ': 'Rasta',
+                
+                // Project Related Words
+                'پروجیکٹ': 'Project',
+                'ماڈل': 'Model',
+                'اے آئی': 'AI',
+                'مشین لرننگ': 'ML',
+                'جی پی ٹی': 'GPT',
+                'پائتھن': 'Python',
+                'جاوا': 'Java',
+                'ڈیپ سیک': 'DeepSeek',
+                'اسپیچ ٹو ٹیکسٹ ماڈل': 'Speech to Text Model',
+                'اے پی آئی': 'API',
+                'کلاؤڈ': 'Claude',
+                'ڈیٹا سیٹ': 'Dataset',
+                'ری ایکٹ جے ایس': 'ReactJS',
+                'جاوا اسکرپٹ': 'JavaScript',
+                'ایچ ٹی ایم ایل': 'HTML',
+                'سی ایس ایس': 'CSS',
+                'فرنٹ اینڈ': 'Frontend',
+                'بیک اینڈ': 'Backend',
+                'کوڈ': 'Code',
+                'ڈیٹا بیس': 'Database',
+                'منگو ڈی بی': 'MongoDB',
+                'فریم ورک': 'Framework',
+                'لائبریری': 'Library',
+                'ڈاکیومنٹیشن': 'Documentation',
+                'ڈیپلائے': 'Deploy',
+                'گیٹ ہب': 'GitHub',
+                'ورچوئل': 'Virtual',
+                'سرور': 'Server',
+                'ہوسٹنگ': 'Hosting',
+                'یوزر انٹرفیس': 'User Interface',
+                'یوزر ایکسپیرینس': 'User Experience',
+                'فلو چارٹ': 'Flowchart',
+                'یوز کیس': 'Use Case',
+                'اسکرپٹ': 'Script',
+                'ماڈیول': 'Module',
+                'ایپلیکیشن': 'Application',
+                'آٹومیشن': 'Automation',
+                'انپٹ': 'Input',
+                'آؤٹ پٹ': 'Output',
+                'انوویٹو': 'Innovative',
+                'کنکشن': 'Connection',
+                'رکویسٹ': 'Request',
+                'ریسپانس': 'Response',
+                'کمپائل': 'Compile',
+                'ڈی بگ': 'Debug',
+                'انٹیگریشن': 'Integration',
+                
+                // Common English Words in Urdu Script (Phonetic)
+                'یوز': 'Use',
+                'ویری': 'Very',
+                'گُڈ': 'Good',
+                'ایکسِلینٹ': 'Excellent',
+                'فائن': 'Fine',
+                'گریٹ': 'Great',
+                'آوسم': 'Awesome',
+                'کُول': 'Cool',
+                'تھینک یو': 'Thank you',
+                'سیمز': 'Seems',
+                'نو': 'No',
+                'یَس': 'Yes',
+                'ہَری': 'Hurry',
+                'ٹائم': 'Time',
+                'ڈُو': 'Do',
+                'ڈونٹ': 'Don’t',
+                'ریڈی': 'Ready',
+                'پلیز': 'Please',
+                'اوکے': 'Okay',
+                'واٹ': 'What',
+                'ویئر': 'Where',
+                'وائے': 'Why',
+                'ہاؤ': 'How',
+                'مور': 'More',
+                'لیس': 'Less',
+                'ناؤ': 'Now',
+                'دین': 'Then',
+                'فارورڈ': 'Forward',
+                'بیک': 'Back',
+                'ورک': 'Work',
+                'نیو': 'New',
+                'اولڈ': 'Old',
+                'شائنی': 'Shiny',
+                'ہَری اَپ': 'Hurry up',
+                'ہیلپ': 'Help',
+                'فرینڈ': 'Friend',
+                'ڈِفِکلٹ': 'Difficult',
+                'ایزی': 'Easy',
+                'لِٹل': 'Little',
+                'مچ': 'Much',
+                'آرڈر': 'Order',
+                'چینج': 'Change',
+                'تھِنک': 'Think',
+                'رِمِمبر': 'Remember',
+                'سِپِیک': 'Speak',
+                'لِسِن': 'Listen',
+                'سی': 'See',
+                'نو': 'Know',
+                'ریلیکس': 'Relax',
+                
+                // Verb Tenses (Past, Present, Future)x                 
+                // "Karna" - To do
+                'کر دیا': 'Kar diya',     // Past
+                'کر رہا ہوں': 'Kar raha hoon', // Present
+                'کر دوں گا': 'Kar doon ga',   // Future
+                
+                // "Lena" - To take
+                'لے لیا': 'Le liya',
+                'لے رہا ہوں': 'Le raha hoon',
+                'لے لوں گا': 'Le loon ga',
+                
+                // "Dena" - To give
+                'دے دیا': 'De diya',
+                'دے رہا ہوں': 'De raha hoon',
+                'دے دوں گا': 'De doon ga',
+                
+                // "Kehna" - To say
+                'کہا': 'Kaha',
+                'کہہ رہا ہوں': 'Keh raha hoon',
+                'کہوں گا': 'Kahoonga',
+                
+                // "Aana" - To come
+                'آیا': 'Aaya',
+                'آ رہا ہوں': 'Aa raha hoon',
+                'آؤں گا': 'Aaunga',
+                
+                // "Jana" - To go
+                'گیا': 'Gaya',
+                'جا رہا ہوں': 'Ja raha hoon',
+                'جاؤں گا': 'Jaoonga',
+                
+                // "Padhna" - To read/study
+                'پڑھ لیا': 'Parh liya',
+                'پڑھ رہا ہوں': 'Parh raha hoon',
+                'پڑھ لوں گا': 'Parh loon ga',
+                
+                // "Samajhna" - To understand
+                'سمجھا': 'Samjha',
+                'سمجھ رہا ہوں': 'Samajh raha hoon',
+                'سمجھ جاؤں گا': 'Samajh jaoonga',
+                
+                // "Bolna" - To speak
+                'بولا': 'Bola',
+                'بول رہا ہوں': 'Bol raha hoon',
+                'بولوں گا': 'Boloon ga',
+                
+                // "Sochna" - To think
+                'سوچا': 'Socha',
+                'سوچ رہا ہوں': 'Soch raha hoon',
+                'سوچوں گا': 'Sochoon ga',
+                
+                // Commonly Used Informal Words
+                'بڑھیا ': 'Badiya ',
+                'واہ': 'Wah',
+                'کمال': 'Kamaal',
+                'اوئے': 'Oye',
+                'یار': 'Yaar',
+                'چل': 'Chal',
+                'ٹھیک': 'Theek',
+                'اوکے': 'Okay',
+                'صحیح': 'Sahi',
+                'واہ بھئی': 'Wah bhai',
+                'بس': 'Bas',
+                'کچھ': 'Kuch',
+                'زیادہ': 'Zyada',
+                'کم': 'Kam',
+                'شاید': 'Shayad',
+                'بالکل': 'Bilkul',
+                'ہاں': 'Haan',
+                'نہیں': 'Nahi',
+                'کیوں': 'Kyun',
+                'کب': 'Kab',
+                'کدھر': 'Kidhar',
+                'ادھر': 'Idhar',
+                'ادھر ہی': 'Idhar hi',
+                'ادھر آؤ': 'Idhar aao',
+                'کیا': 'Kya',
+                'کیسا': 'Kaisa',
+                'کیسی': 'Kaisi',
+                'ٹھیک ہے': 'Theek hai',
+                'جلدی': 'Jaldi',
+                'آرام سے': 'Aaraam se',
+                'دھیرے': 'Dheere',
+                'بس کر': 'Bas kar',
+                'چپ کر': 'Chup kar',
+                'سچ میں': 'Sach mein',
+                'مزا آیا': 'Maza aaya',
+                'ختم': 'Khatam',
+                'شروع': 'Shuru',
+                'واپس': 'Wapas',
+                'ابھی': 'Abhi',
+                'پہلے': 'Pehle',
+                'بعد میں': 'Baad mein',
+                'کبھی': 'Kabhi',
+                'ہمیشہ': 'Hamesha',
+                'تھوڑی دیر': 'Thori der',
+                'سب': 'Sab',
+                'کافی': 'Kaafi',
+                'بس اتنا': 'Bas itna',
+                'کبھی نہیں': 'Kabhi nahi',
+                
+                // Popular Platforms & Tools
+                'فیس بک': 'Facebook',
+                'لنکڈ اِن': 'LinkedIn',
+                'انسٹاگرام': 'Instagram',
+                'ٹوئٹر': 'Twitter',
+                'ایکس': 'X',
+                'یوٹیوب': 'YouTube',
+                'واٹس ایپ': 'WhatsApp',
+                'ٹیلیگرام': 'Telegram',
+                'ریڈٹ': 'Reddit',
+                'ڈسکارڈ': 'Discord',
+                'سنیپ چیٹ': 'Snapchat',
+                'گوگل': 'Google',
+                'جی میل': 'Gmail',
+                'زوم': 'Zoom',
+                'اسکائپ': 'Skype',
+                'سلیک': 'Slack',
+                'درست': 'Daraz',
+                'علی بابا': 'Alibaba',
+                'ایمازون': 'Amazon',
+                'فائیور': 'Fiverr',
+                'اپ ورک': 'Upwork',
+                'گٹ ہب': 'GitHub',
+                'گٹ لیب': 'GitLab',
+                'کوڈ پین': 'CodePen',
+                'بی ہینس': 'Behance',
+                'ڈرائیو': 'Drive',
+                'کینوا': 'Canva',
+                'نوٹ پیڈ++': 'Notepad++',
+                'وی ایس کوڈ': 'VS Code',
+                'جیو میٹنگ': 'JioMeet',
+                'میٹ': 'Meet',
+                'مایکروسافٹ ٹیمز': 'Microsoft Teams',
+                'ڈیپ ایل': 'DeepL',
+                'چیٹ جی پی ٹی': 'ChatGPT',
+                'کاپائلٹ': 'Copilot',
+                'ڈراپ باکس': 'Dropbox',
+                'ون ڈرائیو': 'OneDrive',
+                'بلینک': 'Blynk',
+                'ڈیٹا کیمپ': 'DataCamp',
+                'کورسیرا': 'Coursera',
+                'یودیمی': 'Udemy',
+                'خان اکیڈمی': 'Khan Academy',
+                'نیٹ فلکس': 'Netflix',
+                'پرائم ویڈیو': 'Prime Video',
+                'ہاٹ اسٹار': 'Hotstar',
+                'ڈزنی پلس': 'Disney+',
+                
+
+            };
+                  
+            
+            // Add short delay to simulate processing
+            setTimeout(() => {
+                // First attempt to transliterate the complete phrase
+                if (transliterations[text.trim()]) {
+                    romanText.value = transliterations[text.trim()];
+                    statusText.textContent = "Transliteration completed";
+                    console.log("Found exact transliteration match");
+                    return;
+                }
+                
+                // If not found, try to match longer phrases within the text
+                let transliterated = false;
+                let transliteratedText = text;
+                
+                // Try to match phrases in the dictionary, from longest to shortest
+                const phrases = Object.keys(transliterations).sort((a, b) => b.length - a.length);
+                
+                for (const phrase of phrases) {
+                    if (text.includes(phrase)) {
+                        transliteratedText = transliteratedText.replace(new RegExp(phrase, 'g'), transliterations[phrase]);
+                        transliterated = true;
+                        console.log("Replaced phrase:", phrase);
+                    }
+                }
+                
+                if (transliterated) {
+                    romanText.value = transliteratedText;
+                    console.log("Partial transliteration completed");
+                } else {
+                    // If no matches found at all
+                    romanText.value = "Transliteration unavailable - In a production app, this would connect to a transliteration API";
+                    console.log("No transliteration matches found");
+                }
+                
+                statusText.textContent = "Transliteration completed";
+            }, 800);
+        }
+    }
+});

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Lingo Live</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Additional styles for the home page - ONLY SPACING MODIFIED */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem 1rem; /* Reduced padding */
+        }
+        
+        .hero-section {
+            text-align: center;
+            margin-bottom: 1.5rem; /* Reduced margin */
+            width: 100%;
+            max-width: 1200px;
+        }
+        
+        .title-container {
+            margin-bottom: 1rem; /* Reduced margin */
+        }
+        
+        .urdu-title {
+            font-size: 4rem;
+            margin-bottom: 1rem; /* Reduced margin */
+            text-align: center;
+        }
+        
+        .english-title {
+            font-size: 3rem;
+            margin-bottom: 1rem; /* Reduced margin */
+            text-align: center;
+        }
+        
+        /* Modified layout to use horizontal space better */
+        .hero-content {
+            display: flex;
+            flex-direction: row; /* Changed to row to use horizontal space */
+            align-items: center;
+            width: 100%;
+            gap: 2rem;
+        }
+        
+        .image-showcase {
+            width: 38%; /* Take portion of the width */
+            margin: 0; /* Removed margins */
+            text-align: center;
+        }
+        
+        .showcase-img {
+            max-width: 100%; /* Fill container width */
+            height: auto;
+            border-radius: 12px;
+            box-shadow: 0 15px 30px rgba(5, 10, 15, 0.3);
+            object-fit: contain;
+        }
+        
+        .description-container {
+            display: flex;
+            flex-direction: column;
+            width: 50%; /* Take half the width */
+            gap: 2rem; /* Reduced gap */
+            justify-content: center; /* Center content vertically */
+        }
+        
+        .description-urdu, .description-english {
+            flex: 1;
+            min-width: unset; /* Remove min-width */
+            max-width: unset; /* Remove max-width */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .urdu-text {
+            font-size: 1.5rem;
+            line-height: 2.5;
+            margin-bottom: 1.5rem; /* Increased margin */
+            text-align: center; /* Changed to center alignment */
+        }
+        
+        .description {
+            font-size: 1.3rem;
+            line-height: 1.9;
+            margin-bottom: 1.5rem; /* Increased margin */
+            text-align: center; /* Changed to center alignment */
+        }
+        
+        .btn-container {
+            display: flex;
+            justify-content: center; /* Center the buttons beneath text */
+            gap: 1rem;
+            margin-bottom: 0; /* Removed margin */
+        }
+        
+        .features-section {
+            display: flex;
+            justify-content: space-between; /* Space evenly */
+            gap: 1rem; /* Reduced gap */
+            margin-bottom: 2rem; /* Reduced margin */
+            width: 100%;
+            max-width: 1200px;
+        }
+        
+        .feature-card {
+            flex: 1;
+            min-width: unset; /* Remove min-width */
+            max-width: unset; /* Remove max-width */
+            background-color: #6FBAC6;
+            border-radius: 8px;
+            padding: 1.25rem; /* Reduced padding */
+            box-shadow: 0 3px 5px rgba(0,0,0,0.08);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem; /* Reduced margin */
+        }
+        
+        .feature-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem; /* Reduced margin */
+        }
+        
+        .feature-description {
+            color: #555;
+            line-height: 1.5;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .hero-content {
+                flex-direction: column; /* Stack on mobile */
+            }
+            
+            .image-showcase, .description-container {
+                width: 100%; /* Full width on mobile */
+            }
+            
+            .features-section {
+                flex-direction: column;
+            }
+            
+            .urdu-title, .english-title {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <ul class="nav-links">
+                <li><a href="index.html" class="active">Home</a></li>
+                <li><a href="translate.html">Translate</a></li>
+                <li><a href="learn.html">Learn</a></li>
+                <li><a href="about.html">About</a></li>
+                <li><a href="reviews.html">Reviews</a></li>
+                <li><a href="contact.html">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="hero-section">
+            <div class="title-container">
+                <h1 class="urdu-title">لوکل لینگو لائیو</h1>
+                <h2 class="english-title">LOCAL LINGO LIVE</h2>
+            </div>
+            
+            <div class="hero-content">
+                <div class="image-showcase">
+                    <img src="homepage image.png" alt="Local Lingo Live Homepage Image" class="showcase-img">
+                </div>
+                
+                <div class="description-container">
+                    <div class="description-urdu">
+                        <div class="urdu-text">ایک ایسا وسیلہ جو اردو بول چال کو درست طریقے سے لکھائی میں تبدیل کرے۔</div>
+                        <div class="btn-container">
+                            <a href="translate.html" class="btn primary-btn">شروع کریں →</a>
+                        </div>
+                    </div>
+                    
+                    <div class="description-english">
+                        <p class="description">A speech-to-text transcription tool that accurately converts Urdu speech into written Urdu text.</p>
+                        <div class="btn-container">
+                            <a href="translate.html" class="btn primary-btn">Get Started →</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="features-section">
+            <div class="feature-card">
+                <div class="feature-icon">🎙️</div>
+                <h3 class="feature-title">Speech Recognition</h3>
+                <p class="feature-description">Advanced AI-powered speech recognition specifically trained for Urdu language patterns and dialects.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">📝</div>
+                <h3 class="feature-title">Accurate Transcription</h3>
+                <p class="feature-description">Get precise written output with proper grammar and punctuation in authentic Urdu script.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🔄</div>
+                <h3 class="feature-title">Learn & Translate</h3>
+                <p class="feature-description">Improve your language skills and translate between Urdu and other languages seamlessly.</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>About Local Lingo Live</h3>
+                <p>We are committed to delivering innovative solutions that enhance your language learning experience. Our mission is to empower individuals with cutting-edge technology for language preservation and learning.</p>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="translate.html">Translate</a></li>
+                    <li><a href="learn.html">Learn</a></li>
+                    <li><a href="about.html">About</a></li>
+                    <li><a href="reviews.html">Reviews</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Contact</h3>
+                <p>Have questions or need assistance? We're here to help!</p>
+                <p><span class="icon">📧</span> junaidbeg96@gmail.com</p>
+                <p><span class="icon">📞</span> +91 55555 12345</p>
+                <p><span class="icon">📍</span> Bhopal Raah-e-Taraqqi Park, Innovation Avenue, India</p>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Stay Updated</h3>
+                <div class="newsletter">
+                    <h4>Subscribe to Our Newsletter</h4>
+                    <div class="subscribe-form">
+                        <input type="email" placeholder="Enter your email">
+                        <button class="subscribe-btn">Subscribe</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="copyright">
+            © 2025 Local Lingo Live. All rights reserved.
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

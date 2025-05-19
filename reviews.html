@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reviews - Local Lingo Live</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="translate.html">Translate</a></li>
+                <li><a href="learn.html">Learn</a></li>
+                <li><a href="about.html">About</a></li>
+                <li><a href="reviews.html" class="active">Reviews</a></li>
+                <li><a href="contact.html">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="page-content">
+        <div class="container">
+            <div class="reviews-container">
+                <h1 class="page-title">Customer Reviews</h1>
+                
+                <div class="review-card">
+                    <div class="reviewer-info">
+                        <div class="reviewer-img">
+                            <img src="images/user-placeholder.png" alt="Aryan Gaikwad" onerror="this.outerHTML='AG'">
+                        </div>
+                        <div class="reviewer-details">
+                            <h3>Aryan Gaikwad</h3>
+                            <div class="rating">★★★★★</div>
+                        </div>
+                    </div>
+                    <p class="review-text">
+                        "Local Lingo Live has truly exceeded my expectations! The speech-to-text feature is remarkably accurate, especially for Urdu..."
+                    </p>
+                </div>
+                
+                <div class="review-card">
+                    <div class="reviewer-info">
+                        <div class="reviewer-img">
+                            <img src="images/user-placeholder.png" alt="Izhaan Ahmed" onerror="this.outerHTML='IA'">
+                        </div>
+                        <div class="reviewer-details">
+                            <h3>Izhaan Ahmed</h3>
+                            <div class="rating">★★★★☆</div>
+                        </div>
+                    </div>
+                    <p class="review-text">
+                        "I can't express how vital Local Lingo Live has been for my work in cultural preservation..."
+                    </p>
+                </div>
+                
+                <div class="review-card">
+                    <div class="reviewer-info">
+                        <div class="reviewer-img">
+                            <img src="images/user-placeholder.png" alt="Devdatta Patil" onerror="this.outerHTML='DP'">
+                        </div>
+                        <div class="reviewer-details">
+                            <h3>Devdatta Patil</h3>
+                            <div class="rating">★★★★★</div>
+                        </div>
+                    </div>
+                    <p class="review-text">
+                        "As a developer, I am thoroughly impressed with Local Lingo Live's performance..."
+                    </p>
+                </div>
+                
+                <div class="review-form-section">
+                    <h2>Share Your Experience</h2>
+                    <p>Help us grow by leaving your review!</p>
+                    
+                    <form id="review-form">
+                        <div class="form-group">
+                            <label for="name">Your Name:</label>
+                            <input type="text" id="name" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="rating">Rating:</label>
+                            <select id="rating" name="rating" required>
+                                <option value="5">★★★★★</option>
+                                <option value="4">★★★★☆</option>
+                                <option value="3">★★★☆☆</option>
+                                <option value="2">★★☆☆☆</option>
+                                <option value="1">★☆☆☆☆</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="review">Your Review:</label>
+                            <textarea id="review" name="review" required></textarea>
+                        </div>
+                        <button type="submit" class="submit-btn">Submit Review</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>About Us</h3>
+                <p>We are committed to delivering innovative solutions that enhance your experience. Our mission is to empower individuals and businesses with cutting-edge technology and personalized support.</p>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="translate.html">Translate</a></li>
+                    <li><a href="learn.html">Learn</a></li>
+                    <li><a href="about.html">About</a></li>
+                    <li><a href="reviews.html">Reviews</a></li>
+                    <li><a href="contact.html">Contact Us</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Contact Us</h3>
+                <p>Have questions or need assistance? We're here to help!</p>
+                <p><span class="icon">📧</span> junaidbeg96@gmail.com</p>
+                <p><span class="icon">📞</span> +91 55555 12345</p>
+                <p><span class="icon">📍</span> Bhopal Raah-e-Taraqqi Park, Innovation Avenue, India</p>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Follow Us</h3>
+                <div class="newsletter">
+                    <h4>Subscribe to Our Newsletter</h4>
+                    <div class="subscribe-form">
+                        <input type="email" placeholder="Enter your email">
+                        <button class="subscribe-btn">Subscribe</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="copyright">
+            © 2025 Your Company Name. All rights reserved.
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

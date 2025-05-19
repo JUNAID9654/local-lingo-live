@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact - Local Lingo Live</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Additional styles for contact page */
+        .contact-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .contact-info {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .contact-form-section {
+            flex: 1;
+            min-width: 300px;
+            background-color: rgba(100, 200, 180, 0.1);
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .developer-card {
+            background-color: #e8f1fd;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.08);
+            margin-bottom: 2rem;
+            border-left: 4px solid #4285f4;
+        }
+        
+        .developer-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .developer-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            background-color: #e9eef6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: #4285f4;
+        }
+        
+        .developer-details h3 {
+            margin: 0 0 0.5rem 0;
+            color: #333;
+        }
+        
+        .developer-title {
+            font-style: italic;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+        
+        .contact-links {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .contact-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            color: #4285f4;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        
+        .contact-link:hover {
+            color: #2b579a;
+        }
+        
+        .faq-section {
+            margin-top: 3rem;
+        }
+        
+        .faq-item {
+            border-bottom: 1px solid #eee;
+            padding: 1rem 0;
+        }
+        
+        .faq-question {
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .faq-answer {
+            margin-top: 1rem;
+            color: #555;
+            line-height: 1.6;
+            padding-left: 1rem;
+            border-left: 3px solid #4285f4;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+        
+        .submit-btn {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background-color 0.2s;
+        }
+        
+        .submit-btn:hover {
+            background-color: #2b579a;
+        }
+        
+        .privacy-note {
+            font-size: 0.85rem;
+            color: #777;
+            margin-top: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .contact-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="translate.html">Translate</a></li>
+                <li><a href="learn.html">Learn</a></li>
+                <li><a href="about.html">About</a></li>
+                <li><a href="reviews.html">Reviews</a></li>
+                <li><a href="contact.html" class="active">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="page-content">
+        <div class="container">
+            <h1>Contact Us</h1>
+            <p class="intro-text">Have questions about Local Lingo Live? Feel free to reach out — I'm here to help!</p>
+            
+            <div class="contact-container">
+                <div class="contact-info">
+                    <div class="developer-card">
+                        <div class="developer-info">
+                            <div class="developer-avatar">JB</div>
+                            <div class="developer-details">
+                                <h3>M JUNAID BEG</h3>
+                                <div class="developer-title">Developer & Creator of Local Lingo Live</div>
+                            </div>
+                        </div>
+                        <div class="contact-links">
+                            <a href="mailto:junaidbeg96@gmail.com" class="contact-link">
+                                <span class="icon">📧</span> junaidbeg96@gmail.com
+                            </a>
+                        </div>
+                        <div class="contact-links">
+                            <a href="https://www.linkedin.com/in/junaid-beg-3b1944251/" target="_blank" class="contact-link">
+                                <span class="icon">💼</span> LinkedIn
+                            </a>
+                            <a href="https://github.com/JUNAID9654" target="_blank" class="contact-link">
+                                <span class="icon">💻</span> GitHub
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-section">
+                        <h2>Frequently Asked Questions</h2>
+                        
+                        <div class="faq-item">
+                            <div class="faq-question">
+                                How can I get updates about Local Lingo Live?
+                            </div>
+                            <div class="faq-answer">
+                                Subscribe to our newsletter at the bottom of this page to receive updates about new features, languages, and improvements. You can also follow our GitHub repository for technical updates.
+                            </div>
+                        </div>
+                        
+                        <div class="faq-item">
+                            <div class="faq-question">
+                                How can I contribute to Local Lingo Live?
+                            </div>
+                            <div class="faq-answer">
+                                I welcome contributions! You can contribute by submitting language corrections, suggesting new features, or even contributing code on GitHub. Please reach out via the contact form with your ideas.
+                            </div>
+                        </div>
+                        
+                        <div class="faq-item">
+                            <div class="faq-question">
+                                What is Local Lingo Live?
+                            </div>
+                            <div class="faq-answer">
+                                Local Lingo Live is a platform designed to help users learn and translate regional languages and dialects. It focuses on preserving linguistic diversity by making local languages accessible to everyone.
+                            </div>
+                        </div>
+                        
+                        <div class="faq-item">
+                            <div class="faq-question">
+                                Is Local Lingo Live available for offline use?
+                            </div>
+                            <div class="faq-answer">
+                                Currently, Local Lingo Live requires an internet connection. However, we're exploring options for offline functionality in future updates.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="contact-form-section">
+                    <h2>Send a Message</h2>
+                    <p>Let's connect! Fill in the form below, and I'll get back to you soon.</p>
+                    
+                    <form class="contact-form">
+                        <div class="form-group">
+                            <label for="name">Name</label>
+                            <input type="text" id="name" name="name" placeholder="Your name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" placeholder="Your email address" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="subject">Subject</label>
+                            <input type="text" id="subject" name="subject" placeholder="What's this about?" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="message">Message</label>
+                            <textarea id="message" name="message" rows="5" placeholder="Your message here..." required></textarea>
+                        </div>
+                        
+                        <button type="submit" class="submit-btn">
+                            <span class="icon">🔒</span> Let's Talk!
+                        </button>
+                        
+                        <p class="privacy-note">Your information is secure and will only be used to respond to your inquiry.</p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>About Local Lingo Live</h3>
+                <p>Local Lingo Live is committed to preserving and promoting linguistic diversity through innovative language learning and translation tools.</p>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="translate.html">Translate</a></li>
+                    <li><a href="learn.html">Learn</a></li>
+                    <li><a href="about.html">About</a></li>
+                    <li><a href="reviews.html">Reviews</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Contact</h3>
+                <p>Have questions or need assistance? I'm here to help!</p>
+                <p><span class="icon">📧</span> junaidbeg96@gmail.com</p>
+                <p><span class="icon">📍</span> Bhopal Raah-e-Taraqqi Park, Innovation Avenue, India</p>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Stay Updated</h3>
+                <div class="newsletter">
+                    <h4>Subscribe to Our Newsletter</h4>
+                    <div class="subscribe-form">
+                        <input type="email" placeholder="Enter your email">
+                        <button class="subscribe-btn">Subscribe</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="copyright">
+            © 2025 Local Lingo Live. All rights reserved.
+        </div>
+    </footer>
+
+    <script>
+        // Simple FAQ toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const faqQuestions = document.querySelectorAll('.faq-question');
+            
+            faqQuestions.forEach(question => {
+                question.addEventListener('click', () => {
+                    const answer = question.nextElementSibling;
+                    const isVisible = answer.style.display === 'block';
+                    
+                    answer.style.display = isVisible ? 'none' : 'block';
+                });
+                
+                // Hide answers initially
+                question.nextElementSibling.style.display = 'none';
+            });
+        });
+    </script>
+</body>
+</html>
