@@ -34,4 +34,4 @@ Local-Lingo-Live/
 │ ├── logo.png # Project logo
 │ └── waveform.jpg # Decorative image
 ├── LICENSE # Restrictive license (view-only, no reuse)
-└── README.md # You're reading it!
+└── README.md
